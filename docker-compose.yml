@@ -10,8 +10,9 @@ services:
       POSTGRES_DB: parkflash
       POSTGRES_USER: parkflash
       POSTGRES_PASSWORD: parkflash
+    # 127.0.0.1: só aceita conexões desta máquina, não da rede.
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - parkflash-pgdata:/var/lib/postgresql/data
     healthcheck:
