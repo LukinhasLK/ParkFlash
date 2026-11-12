@@ -1,154 +1,218 @@
-# ParkFlash
+<div align="center">
 
-Sistema de gestão de estacionamento: front end Angular 19 (standalone components + signals),
-com layout desktop (sidebar) e mobile (bottom navigation), e back end Java (Spring Boot 3)
-em [`backend/`](backend).
+# ⚡ ParkFlash
 
-## Rodando
+**Sistema de gestão financeira para estacionamentos com serviço de manobrista**
 
-Precisa de Java 17+ e Node 18+. Abra dois terminais:
+Lançamento das fichas diárias, controle de manobristas e despesas, relatórios e divisão de lucro entre sócios.
+
+![Angular](https://img.shields.io/badge/Angular-19-DD0031?logo=angular&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)
+![Java](https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5-6DB33F?logo=springboot&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-H2%20%2F%20Postgres-4169E1?logo=postgresql&logoColor=white)
+![JWT](https://img.shields.io/badge/Auth-JWT%20%2B%20BCrypt-000000?logo=jsonwebtokens&logoColor=white)
+
+<img src="docs/screenshots/desktop-dashboard.png" alt="Dashboard do ParkFlash" width="900">
+
+</div>
+
+---
+
+## Sumário
+
+- [Sobre o projeto](#sobre-o-projeto)
+- [Funcionalidades](#funcionalidades)
+- [Telas](#telas)
+- [Tecnologias](#tecnologias)
+- [Arquitetura](#arquitetura)
+- [Como rodar](#como-rodar)
+- [Usuários de demonstração](#usuários-de-demonstração)
+- [Regras de negócio](#regras-de-negócio)
+- [API REST](#api-rest)
+- [Segurança](#segurança)
+- [Testes](#testes)
+- [Configuração](#configuração)
+- [Estrutura de pastas](#estrutura-de-pastas)
+- [Autor](#autor)
+
+## Sobre o projeto
+
+Em estacionamentos com manobristas, o fechamento de cada turno costuma ser feito em fichas de papel:
+quantos carros entraram, quanto foi recebido em dinheiro e cartão, quanto se pagou de diária aos
+manobristas e quais despesas surgiram. No fim do mês, alguém ainda precisa somar tudo, descontar
+aluguel e seguro e dividir o resultado entre os sócios de cada unidade.
+
+O **ParkFlash** digitaliza esse processo. O operador lança a ficha do turno, o sistema calcula
+os totais e gera em tempo real os indicadores, relatórios e a divisão de lucro de cada sócio.
+
+Projeto acadêmico desenvolvido com **Angular** no front end e **Java (Spring Boot)** no back end.
+
+## Funcionalidades
+
+- 📊 **Dashboard**: faturamento, fichas, carros, resultado do mês, gráficos e alertas.
+- 📝 **Fichas**: lançamento por unidade e turno, com cálculo automático de carros, taxa da maquininha, diárias e saldo.
+- 📈 **Relatórios**: resultado por período e unidade, com exportação em PDF.
+- 🧑‍✈️ **Manobristas**: cadastro e extrato mensal de dias trabalhados e diárias.
+- 💸 **Despesas fixas**: aluguel, seguro e manutenção, descontados do resultado.
+- 🤝 **Divisão de lucro**: rateio do resultado entre os sócios de cada unidade, por percentual.
+- 🚗 **Carros por mês**: comparativo mensal e anual de movimento.
+- 🏢 **Unidades, sócios e usuários**: cadastros com validação.
+- 🔐 **Três níveis de acesso**: Proprietário, Gerente e Operador, com permissões checadas no servidor.
+- 📱 **Responsivo**: sidebar no desktop e navegação inferior no celular.
+
+## Telas
+
+| Login | Nova ficha |
+|---|---|
+| <img src="docs/screenshots/login.png" alt="Login"> | <img src="docs/screenshots/desktop-fichas-nova.png" alt="Nova ficha"> |
+
+| Relatórios | Divisão de lucro |
+|---|---|
+| <img src="docs/screenshots/desktop-relatorios.png" alt="Relatórios"> | <img src="docs/screenshots/desktop-divisao-lucro.png" alt="Divisão de lucro"> |
+
+| Fichas | Carros por mês |
+|---|---|
+| <img src="docs/screenshots/desktop-fichas.png" alt="Fichas"> | <img src="docs/screenshots/desktop-carros-por-mes.png" alt="Carros por mês"> |
+
+<div align="center">
+  <img src="docs/screenshots/mobile-dashboard.png" alt="Dashboard no celular" width="260">
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/mobile-fichas-nova.png" alt="Nova ficha no celular" width="260">
+  <p><em>Versão mobile</em></p>
+</div>
+
+## Tecnologias
+
+| Camada | Tecnologias |
+|---|---|
+| **Front end** | Angular 19 (standalone components, signals, Reactive Forms, lazy loading), TypeScript, SCSS com design tokens, Chart.js 4, Angular CDK |
+| **Back end** | Java 17, Spring Boot 3.5, Spring Web, Spring Data JPA, Bean Validation, Maven |
+| **Banco de dados** | H2 em arquivo (desenvolvimento) e PostgreSQL (perfil `postgres`), com migrações Flyway |
+| **Segurança** | Spring Security, JWT (JJWT), senhas com BCrypt |
+| **Documentação** | Swagger UI (springdoc-openapi) |
+| **Testes** | Jasmine + Karma (front), JUnit 5 + MockMvc (back) |
+
+## Arquitetura
+
+```mermaid
+flowchart LR
+    U[Usuário] --> A[Angular 19<br/>localhost:4200]
+    A -- "HTTP /api + JWT" --> C[Controllers REST]
+    subgraph Spring Boot - localhost:8080
+        C --> S[Services<br/>regras de negócio]
+        S --> R[Repositories<br/>Spring Data JPA]
+        F[Spring Security<br/>filtro JWT] -.-> C
+    end
+    R --> D[(H2 / PostgreSQL)]
+```
+
+- O **front end** cuida da interface e guarda apenas o token de sessão no navegador.
+- O **back end** é a fonte da verdade: valida os dados, aplica as permissões e recalcula todos os valores.
+- O **Flyway** cria as tabelas e carrega os dados de demonstração na primeira execução.
+
+## Como rodar
+
+**Pré-requisitos:** Java 17+ e Node.js 18+. Não é preciso instalar Maven nem banco de dados.
 
 ```bash
-# 1) back end — http://localhost:8080 (Swagger em /swagger-ui.html)
+# 1) Back end (terminal 1): http://localhost:8080
 cd backend
-./mvnw spring-boot:run        # Windows: mvnw.cmd spring-boot:run
+./mvnw spring-boot:run          # Windows: mvnw.cmd spring-boot:run
 
-# 2) front end — http://localhost:4200
+# 2) Front end (terminal 2): http://localhost:4200
 npm install
 npm start
 ```
 
-O `npm start` usa o `proxy.conf.json`, que encaminha `/api` para a porta 8080 (sem problema de CORS).
+Abra **http://localhost:4200** e entre com um dos [usuários de demonstração](#usuários-de-demonstração).
+A documentação interativa da API fica em **http://localhost:8080/swagger-ui.html**.
+
+> O `npm start` usa o `proxy.conf.json`, que encaminha `/api` para a porta 8080 (sem problemas de CORS).
+> Para restaurar os dados de demonstração, pare o back end e apague a pasta `backend/data/`.
+
+<details>
+<summary><strong>Usando PostgreSQL</strong></summary>
+
+Com o PostgreSQL instalado, crie o banco e rode o back end com o perfil `postgres`:
 
 ```bash
-npm run build                 # build de produção do front
-npm test                      # testes do front (Karma + Jasmine)
-cd backend && ./mvnw test     # testes do back end (JUnit + MockMvc)
+createdb parkflash
+cd backend
+SPRING_PROFILES_ACTIVE=postgres JWT_SEGREDO=um-segredo-longo-com-32-caracteres-ou-mais \
+  DB_USUARIO=postgres DB_SENHA=sua-senha ./mvnw spring-boot:run
 ```
 
-### Login de demonstração
+As mesmas migrações Flyway criam as tabelas no PostgreSQL.
+</details>
 
-Todos os usuários de demonstração usam a senha `123456` (troque em **Meu perfil**):
+## Usuários de demonstração
 
-| Usuário | Nível | Acesso |
+Todos usam a senha **`123456`**, que pode ser trocada em **Meu perfil**.
+
+| Usuário | Nível | O que acessa |
 |---|---|---|
 | `lucasrodrigues.10@icloud.com` | Proprietário | tudo |
 | `pedro@email.com` | Gerente | tudo, menos Sócios, Usuários e Divisão de Lucro |
 | `dario@email.com` | Operador | Fichas (lançar), Manobristas e Meu perfil |
 
-As permissões valem **no servidor** (Spring Security, por nível). No front, `core/services/permissoes.ts`
-e o `roleGuard` só escondem do menu e das rotas o que o nível não pode abrir.
+## Regras de negócio
 
-## Stack
-
-| Item | Escolha |
-|---|---|
-| Framework | Angular 19, standalone components, `signal` / `computed`, controle de fluxo `@if`/`@for` |
-| Estilo | SCSS próprio com design tokens em `src/styles.scss` |
-| Gráficos | Chart.js 4 via `<pf-chart>` |
-| Responsivo | `BreakpointObserver` do `@angular/cdk` (`LayoutService`) |
-| Formulários | Reactive Forms com `FormArray` e validador cruzado |
-| Rotas | Lazy loading por tela + `authGuard` / `guestGuard` |
-
-Não foram usados Angular Material, Tailwind nem `@angular/flex-layout`: o briefing
-especifica medidas e cores exatas, que saem mais diretas com tokens CSS próprios,
-sem sobrescrever um tema de terceiros. `@angular/flex-layout` está descontinuado —
-o mesmo resultado sai de CSS Grid/Flexbox.
-
-## Estrutura
+Os cálculos são feitos no servidor (`CalculoFicha.java`, com `BigDecimal` e arredondamento em 2 casas).
+O front (`calc.ts`) usa as mesmas fórmulas apenas para a prévia enquanto o usuário digita.
 
 ```
-src/app/
-├── core/
-│   ├── guards/       authGuard, guestGuard, roleGuard
-│   ├── interceptors/ authInterceptor (envia o JWT; 401 encerra a sessão)
-│   ├── models/       Ficha, Manobrista, Socio, Despesa, Unidade, Usuario
-│   └── services/     stores em signals que falam com a API + cálculos puros (calc.ts)
-├── shared/
-│   ├── charts/       wrapper do Chart.js e tema dos gráficos
-│   ├── components/   sidebar, bottom-nav, kpi-card, page-header, modal, confirm, icon, logo
-│   └── pipes/        currencyBr, numeroBr, dataBr
-├── layouts/          AppLayout (alterna sidebar × bottom nav)
-└── features/         uma pasta por tela
-
-backend/src/main/java/com/parkflash/
-├── dominio/          entidades JPA (Unidade, Manobrista, Usuario, Socio, Ficha, Despesa…)
-├── repositorio/      Spring Data JPA
-├── servico/          regras de negócio + CalculoFicha (BigDecimal)
-├── seguranca/        JWT (JwtService, FiltroJwt)
-├── config/           Spring Security, CORS, Swagger
-├── erro/             respostas de erro padronizadas
-└── web/              controllers REST + DTOs
+totalCarros     = fichaFim − fichaInício − canceladas
+taxaDescontada  = valorCartão × (taxa / 100)
+líquidoCartão   = valorCartão − taxaDescontada
+saldoFinal      = dinheiro + líquidoCartão − totalDiárias − totalDespesas
+lucroFichas     = Σ saldoFinal das fichas do período
+resultado       = lucroFichas − despesas fixas
+divisãoSócio    = resultado da unidade × (percentual do sócio / 100)
 ```
 
-## Dados
+Validações aplicadas no servidor:
 
-Os dados ficam no banco do back end. Por padrão é um H2 em arquivo (`backend/data/`), criado pelo
-Flyway na primeira execução com os dados de demonstração (`db/demo/V2__dados_demonstracao.sql`).
-Apagar a pasta `backend/data/` restaura a demonstração. O navegador guarda apenas o token
-de sessão (`parkflash.v3.token`); nada de senhas ou dados no `localStorage`.
+- Não pode haver duas fichas com a mesma data, unidade e turno.
+- O mesmo manobrista não pode aparecer duas vezes na ficha.
+- Os percentuais dos sócios de uma unidade devem somar 100%.
+- E-mail de usuário é único.
+- Unidade ou manobrista com histórico não pode ser excluído.
+- Os totais enviados pelo front são ignorados: o servidor recalcula tudo.
 
-Fichas, despesas e sócios guardam `unidadeId`/`manobristaId` (não o nome), então renomear
-uma unidade ou manobrista não quebra o histórico. Unidade ou manobrista com fichas/despesas
-lançadas não pode ser excluído.
-
-**Nenhum indicador é fixo em tela.** Todo KPI, gráfico e total é derivado das mesmas
-fichas, então filtrar uma tela recalcula tudo e as telas nunca se contradizem. As
-fichas de junho/2026 são exatamente as do briefing; janeiro a maio são geradas para
-reproduzir a tabela de "Carros por Mês". Cada ficha fecha na fórmula
-`dinheiro + cartão líquido − diárias − despesas`.
-
-Com isso, estes números do briefing aparecem idênticos em tela:
-
-- Dashboard: R$ 25.600,00 bruto · 8 fichas · 464 carros · R$ 5.377,25 líquido ·
-  despesas R$ 8.420,00 · melhor dia "Sexta-feira"
-- Divisão de Lucro (Junho/Optum): R$ 5.361,25 · 3 sócios · 4 fichas ·
-  R$ 2.144,50 / R$ 1.072,25 / R$ 2.144,50
-- Fichas e Relatórios: todas as linhas de junho, com a coluna de despesas
-  (R$ 1.682,00, R$ 3.883,25, R$ 540,00, R$ 8.427,00, R$ 1.508,50)
-- Carros por Mês: a tabela de janeiro a maio, linha a linha
-
-Alguns totais do briefing eram incompatíveis entre si (por exemplo, "2.246 carros"
-aparece como total geral na tela de Fichas e como total só de maio em Carros por Mês;
-e a soma da tabela mensal dá 4.160, não 8.420). Nesses casos vale o valor calculado,
-para que as telas fechem entre si. Os cards de resumo refletem sempre o filtro ativo.
-
-## Back end (Java)
-
-| Item | Escolha |
-|---|---|
-| Framework | Spring Boot 3.5 (Java 17), Maven (wrapper `mvnw` incluído) |
-| Banco | H2 em arquivo para desenvolvimento; PostgreSQL com o perfil `postgres` |
-| Persistência | Spring Data JPA + migrações Flyway (`db/migration`) |
-| Segurança | Spring Security, JWT assinado (JJWT), senhas com BCrypt, permissões por nível |
-| Documentação | Swagger UI em `http://localhost:8080/swagger-ui.html` |
-| Testes | JUnit 5 + MockMvc (cálculos, login, permissões e regras de negócio) |
-
-**Segurança:** o login (`POST /api/auth/login`) devolve um JWT assinado. Em cada requisição o
-servidor valida a assinatura e recarrega o usuário do banco, então editar o token ou o
-`localStorage` não dá acesso a nada, e um usuário excluído perde o acesso na hora. As senhas são
-guardadas só como hash BCrypt e nunca saem na API.
-
-**Regras no servidor:** o back end recalcula total de carros, bruto, taxa da maquininha e líquido
-de cada ficha (com `BigDecimal`, arredondando para 2 casas) e ignora os totais enviados pelo
-front. Ele também bloqueia ficha duplicada (data + unidade + turno), manobrista repetido na
-ficha, e-mail repetido e exclusão de unidade/manobrista com histórico.
-
-### Endpoints
+## API REST
 
 | Método e rota | Quem pode |
 |---|---|
-| `POST /api/auth/login` · `GET /api/auth/me` · `PUT /api/auth/senha` | público (login) / logado |
+| `POST /api/auth/login` | público |
+| `GET /api/auth/me` · `PUT /api/auth/senha` | qualquer usuário logado |
 | `GET /api/fichas`, `/unidades`, `/manobristas`, `/socios` | todos os níveis |
-| `POST /api/fichas`, `POST/PUT /api/manobristas` | todos os níveis |
-| `PUT/DELETE /api/fichas/{id}`, CRUD `/api/unidades`, `/api/despesas`, `DELETE /api/manobristas/{id}` | Gerente e Proprietário |
+| `POST /api/fichas` · `POST/PUT /api/manobristas` | todos os níveis |
+| `PUT/DELETE /api/fichas/{id}` · CRUD `/api/unidades` e `/api/despesas` · `DELETE /api/manobristas/{id}` | Gerente e Proprietário |
 | `GET /api/relatorios/resumo?ano=&mes=&unidadeId=` | Gerente e Proprietário |
-| CRUD `/api/usuarios`, `POST/PUT/DELETE /api/socios`, `GET /api/relatorios/divisao-lucro?ano=&mes=&unidadeId=` | Proprietário |
+| CRUD `/api/usuarios` · `POST/PUT/DELETE /api/socios` · `GET /api/relatorios/divisao-lucro` | Proprietário |
 
-Erros voltam como `{ "status", "mensagem", "campos" }` (400 validação, 401 sem login,
-403 sem permissão, 404 não encontrado, 409 conflito); o front mostra a `mensagem` num aviso.
+Os erros seguem um formato padrão, `{ "status", "mensagem", "campos" }`: 400 (validação), 401 (sem login),
+403 (sem permissão), 404 (não encontrado) e 409 (conflito). O front mostra a `mensagem` num aviso.
 
-### Configuração
+## Segurança
+
+- **Login com JWT:** `POST /api/auth/login` devolve um token assinado, enviado no cabeçalho `Authorization` de cada requisição.
+- **Senhas com BCrypt:** o banco guarda só o hash, e a senha nunca é devolvida pela API.
+- **Permissões no servidor:** o Spring Security bloqueia cada rota conforme o nível do usuário. O menu do front só esconde o que o nível não pode abrir.
+- **Usuário recarregado a cada requisição:** um token alterado é recusado, e um usuário excluído perde o acesso na hora.
+
+## Testes
+
+```bash
+npm test                        # front end: Jasmine + Karma
+cd backend && ./mvnw test       # back end: JUnit 5 + MockMvc
+```
+
+- **Front end:** cálculos, períodos, permissões, máscaras, `FichasService` e `AuthService`.
+- **Back end:** regras de cálculo, login, permissões por nível e regras de negócio da API.
+
+## Configuração
 
 | Variável | Padrão | Uso |
 |---|---|---|
@@ -160,55 +224,33 @@ Erros voltam como `{ "status", "mensagem", "campos" }` (400 validação, 401 sem
 | `ADMIN_EMAIL` / `ADMIN_SENHA` / `ADMIN_NOME` | — | se o banco começar sem usuários, cria o primeiro Proprietário |
 | `DB_URL` / `DB_USUARIO` / `DB_SENHA` | `jdbc:postgresql://localhost:5432/parkflash` | só no perfil `postgres` |
 
-Para usar PostgreSQL:
-
-```bash
-createdb parkflash
-cd backend
-SPRING_PROFILES_ACTIVE=postgres JWT_SEGREDO=um-segredo-longo-com-32-caracteres-ou-mais \
-  DB_USUARIO=postgres DB_SENHA=sua-senha ./mvnw spring-boot:run
-```
-
-## Cores dos gráficos
-
-A paleta categórica (`shared/charts/chart-theme.ts`) foi validada para daltonismo
-— separação mínima ΔE 9.2 em deutan/protan/tritan considerando todos os pares.
-Séries únicas usam uma única matiz azul, com o passo mais escuro destacando o
-mês recorde. Toda identidade também aparece em texto (legenda e detalhamento),
-nunca só na cor.
-
-## Cálculos
-
-Centralizados em `core/services/calc.ts`:
+## Estrutura de pastas
 
 ```
-totalCarros     = fichaFim − fichaInício − canceladas
-taxaDescontada  = valorCartão × (taxa / 100)
-líquidoCartão   = valorCartão − taxaDescontada
-saldoFinal      = dinheiro + líquidoCartão − totalDiárias − totalDespesas
-lucroFichas     = Σ saldoFinal das fichas do período
-resultado       = lucroFichas − despesas fixas (tela Despesas: aluguel, seguro...)
-divisãoSócio    = resultado da unidade × (percentual / 100)
+ParkFlash/
+├── src/app/                       # Front end (Angular)
+│   ├── core/
+│   │   ├── guards/                # authGuard, guestGuard, roleGuard
+│   │   ├── interceptors/          # envia o JWT; 401 encerra a sessão
+│   │   ├── models/                # Ficha, Manobrista, Socio, Despesa, Unidade, Usuario
+│   │   └── services/              # stores com signals que falam com a API + calc.ts
+│   ├── shared/                    # componentes, gráficos e pipes reutilizáveis
+│   ├── layouts/                   # sidebar (desktop) × bottom nav (mobile)
+│   └── features/                  # uma pasta por tela
+│
+└── backend/                       # Back end (Java / Spring Boot)
+    └── src/main/
+        ├── java/com/parkflash/
+        │   ├── dominio/           # entidades JPA
+        │   ├── repositorio/       # Spring Data JPA
+        │   ├── servico/           # regras de negócio + CalculoFicha
+        │   ├── seguranca/         # JWT (JwtService, FiltroJwt)
+        │   ├── config/            # Spring Security, CORS, Swagger
+        │   ├── erro/              # respostas de erro padronizadas
+        │   └── web/               # controllers REST + DTOs
+        └── resources/db/          # migrações Flyway + dados de demonstração
 ```
 
-Dashboard, Relatórios e Divisão de Lucro mostram as três linhas (lucro das fichas,
-despesas fixas e resultado). Os testes de `calc.ts`, `periodo.ts`, permissões, máscaras,
-`FichasService` e `AuthService` ficam nos `*.spec.ts` ao lado de cada arquivo.
+## Autor
 
-## Detalhes de implementação
-
-- **Nova ficha**: no desktop é formulário único com resumo fixo na lateral; no mobile,
-  stepper de 5 etapas com validação por etapa. Os dois usam o mesmo `FormGroup`.
-- **Exportar PDF** (Relatórios) usa a caixa de impressão do navegador ("Salvar como PDF").
-  `src/styles.scss` tem o bloco `@media print` que remove navegação e filtros.
-- **Sócios** valida que o rateio de cada unidade some 100% e mostra a prévia do
-  fechamento antes de salvar; unidade sem sócios aparece como "sem rateio", não como erro.
-- **Manobristas**: dias trabalhados e total recebido vêm das fichas do mês, não do cadastro.
-- O usuário logado não consegue excluir a própria conta.
-- **Editar**: fichas (`/app/fichas/:id/editar`, Gerente/Proprietário) e despesas.
-- **Validações da ficha**: bloqueia ficha duplicada (mesma data, unidade e turno) e
-  manobrista repetido; ao enviar com erro, a tela rola até o primeiro campo inválido.
-- **Datas** usam o fuso local (`hojeIso()`), não UTC.
-- **CPF e telefone** têm máscara (`pfMascara`) e validação de dígitos.
-- O sino do Dashboard lista alertas reais (rateio ≠ 100%, fichas ou mês no prejuízo).
-# ParkFlash
+Desenvolvido por **Lucas Rodrigues** ([@LukinhasLK](https://github.com/LukinhasLK)) como projeto acadêmico.
