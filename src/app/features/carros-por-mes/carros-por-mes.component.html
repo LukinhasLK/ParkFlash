@@ -1,0 +1,110 @@
+<div class="pf-page">
+  <pf-page-header title="Carros por Mês" subtitle="Total de carros manobrados por período" />
+
+  <div class="pf-filters">
+    <select class="pf-select" [ngModel]="anoEdicao()" (ngModelChange)="anoEdicao.set(+$event)" aria-label="Ano">
+      @for (a of anos; track a) { <option [value]="a">{{ a }}</option> }
+    </select>
+
+    <select class="pf-select" [ngModel]="unidadeEdicao()" (ngModelChange)="unidadeEdicao.set($event)" aria-label="Unidade">
+      <option [value]="todas">Todas</option>
+      @for (nome of unidades(); track nome) { <option [value]="nome">{{ nome }}</option> }
+    </select>
+
+    <button type="button" class="pf-btn pf-btn--dark" (click)="buscar()">Buscar</button>
+  </div>
+
+  <section class="pf-grid-kpi">
+    <pf-kpi-card label="Total de carros no ano" [value]="totalCarros() | numeroBr" [hint]="anoConsultado().toString()" />
+
+    <pf-kpi-card
+      label="Melhor mês"
+      [value]="melhorMes() ? nomeMes(melhorMes()!.mes) : '—'"
+      [hint]="melhorMes() ? (melhorMes()!.carros | numeroBr) + ' carros' : 'sem registros'"
+    />
+
+    <pf-kpi-card label="Média mensal" [value]="mediaMensal() | numeroBr" hint="meses com movimento" />
+
+    @if (comparativo(); as c) {
+      <pf-kpi-card
+        label="Comparativo ano ant."
+        [value]="(c.variacao >= 0 ? '↑ ' : '↓ ') + (c.variacao >= 0 ? c.variacao : -c.variacao) + '%'"
+        [hint]="'base: ' + (c.base | numeroBr) + ' carros'"
+        [tone]="c.variacao >= 0 ? 'success' : 'danger'"
+      />
+    } @else {
+      <pf-kpi-card label="Comparativo ano ant." value="—" hint="sem base de comparação" />
+    }
+  </section>
+
+  <article class="pf-card grafico">
+    <div class="pf-card__head">
+      <h2 class="pf-card__title">Carros manobrados por mês</h2>
+      <p class="pf-card__subtitle">{{ anoConsultado() }} — o mês recorde aparece em destaque</p>
+    </div>
+    <div class="pf-card__body">
+      <pf-chart
+        [config]="grafico()"
+        [height]="isMobile() ? 230 : 300"
+        ariaLabel="Carros manobrados mês a mês"
+      />
+    </div>
+  </article>
+
+  @if (mesesComDados().length === 0) {
+    <div class="pf-card vazio">
+      <p class="vazio__titulo">Nenhum registro em {{ anoConsultado() }}</p>
+      <p class="vazio__texto">Escolha outro ano ou outra unidade.</p>
+    </div>
+  } @else if (isMobile()) {
+    <div class="cards">
+      @for (m of mesesComDados(); track m.mes) {
+        <article class="pf-card card-mes">
+          <div class="card-mes__topo">
+            <span class="card-mes__nome">{{ nomeMes(m.mes) }}</span>
+            <span class="card-mes__carros">{{ m.carros | numeroBr }} carros</span>
+          </div>
+          <div class="card-mes__linha">
+            <span>{{ m.fichas }} fichas</span>
+            <span>{{ m.bruto | currencyBr }}</span>
+          </div>
+          <div class="card-mes__linha card-mes__linha--forte">
+            <span>Líquido</span>
+            <span [class.pf-money--neg]="m.liquido < 0" [class.pf-money--pos]="m.liquido >= 0">
+              {{ m.liquido | currencyBr }}
+            </span>
+          </div>
+        </article>
+      }
+    </div>
+  } @else {
+    <div class="pf-card tabela">
+      <div class="pf-table-wrap">
+        <table class="pf-table">
+          <thead>
+            <tr>
+              <th>Mês</th>
+              <th class="num">Fichas</th>
+              <th class="num">Carros</th>
+              <th class="num">Total bruto</th>
+              <th class="num">Total líquido</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (m of mesesComDados(); track m.mes) {
+              <tr>
+                <td>{{ nomeMes(m.mes) }}</td>
+                <td class="num">{{ m.fichas }}</td>
+                <td class="num">{{ m.carros | numeroBr }}</td>
+                <td class="num">{{ m.bruto | currencyBr }}</td>
+                <td class="num" [class.pf-money--neg]="m.liquido < 0" [class.pf-money--pos]="m.liquido >= 0">
+                  {{ m.liquido | currencyBr }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</div>

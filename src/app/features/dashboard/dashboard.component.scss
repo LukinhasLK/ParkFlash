@@ -1,0 +1,110 @@
+.dash__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.dash__periodo {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  color: var(--pf-text-muted);
+}
+
+.dash__saudacao {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  margin-top: 4px;
+}
+
+.dash__acoes {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.dash__sino {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--pf-radius-sm);
+  border: 1px solid var(--pf-border);
+  background: var(--pf-surface);
+  color: var(--pf-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover { background: var(--pf-surface-alt); color: var(--pf-text); }
+}
+
+.dash__badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--pf-danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dash__graficos {
+  display: grid;
+  grid-template-columns: 730fr 382fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.dash__info {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.info {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.info__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--pf-text-muted);
+}
+
+.info__valor {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+
+.info__valor--danger { color: var(--pf-danger); }
+.info__hint { font-size: 12px; color: var(--pf-text-muted); }
+
+@media (max-width: 1100px) {
+  .dash__graficos { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 767px) {
+  .dash__head { margin-bottom: 16px; }
+  .dash__saudacao { font-size: 21px; }
+  .dash__graficos, .dash__info { grid-template-columns: 1fr; gap: 12px; margin-top: 12px; }
+  .info__valor { font-size: 19px; }
+}

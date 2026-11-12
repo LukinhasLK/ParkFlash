@@ -1,0 +1,104 @@
+<div class="pf-page">
+  <pf-page-header title="Manobristas" subtitle="Cadastro dos manobristas">
+    <button type="button" class="pf-btn pf-btn--primary" (click)="abrir()">
+      <pf-icon name="plus" [size]="17" />
+      Novo manobrista
+    </button>
+  </pf-page-header>
+
+  @if (linhas().length === 0) {
+    <div class="pf-card vazio">
+      <p class="vazio__titulo">Nenhum manobrista cadastrado</p>
+      <p class="vazio__texto">Cadastre a equipe para lançar diárias nas fichas.</p>
+    </div>
+  } @else if (isMobile()) {
+    <div class="cards">
+      @for (m of linhas(); track m.id) {
+        <article class="pf-card card-mano" (click)="abrir(m)">
+          <span class="pf-avatar" [style.background]="m.cor">{{ m.inicial }}</span>
+          <div class="card-mano__info">
+            <p class="card-mano__nome">{{ m.nome }}</p>
+            <p class="card-mano__meta">{{ m.diasNoMes }} {{ m.diasNoMes === 1 ? 'dia' : 'dias' }} em {{ periodo }}</p>
+          </div>
+          <p class="card-mano__valor">{{ m.totalRecebido | currencyBr }}</p>
+        </article>
+      }
+    </div>
+  } @else {
+    <div class="pf-card tabela">
+      <div class="pf-table-wrap">
+        <table class="pf-table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Telefone</th>
+              <th>CPF</th>
+              <th class="num">Dias no mês</th>
+              <th class="num">Total recebido</th>
+              <th class="actions">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (m of linhas(); track m.id) {
+              <tr>
+                <td>
+                  <span class="celula-nome">
+                    <span class="pf-avatar" [style.background]="m.cor">{{ m.inicial }}</span>
+                    {{ m.nome }}
+                  </span>
+                </td>
+                <td>{{ m.telefone || '—' }}</td>
+                <td>{{ m.cpf || '—' }}</td>
+                <td class="num">{{ m.diasNoMes }}</td>
+                <td class="num">{{ m.totalRecebido | currencyBr }}</td>
+                <td class="actions">
+                  <button type="button" class="acao" (click)="abrir(m)">Editar</button>
+                  <button type="button" class="acao acao--danger" (click)="paraExcluir.set(m)">Excluir</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</div>
+
+@if (formAberto()) {
+  <pf-modal [title]="editando() ? 'Editar manobrista' : 'Novo manobrista'" (fechar)="formAberto.set(false)">
+    <form class="modal-form" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+      <div class="pf-field">
+        <label class="pf-label" for="m-nome">Nome</label>
+        <input id="m-nome" class="pf-input" type="text" formControlName="nome" />
+        @if (invalido('nome')) { <span class="pf-error">Informe o nome.</span> }
+      </div>
+
+      <div class="pf-field">
+        <label class="pf-label" for="m-telefone">Telefone</label>
+        <input id="m-telefone" class="pf-input" type="tel" placeholder="(11) 90000-0000" formControlName="telefone" />
+      </div>
+
+      <div class="pf-field">
+        <label class="pf-label" for="m-cpf">CPF</label>
+        <input id="m-cpf" class="pf-input" type="text" placeholder="000.000.000-00" formControlName="cpf" />
+      </div>
+
+      <p class="modal-form__nota">
+        Dias trabalhados e total recebido são calculados a partir das fichas do mês.
+      </p>
+
+      <div class="modal-form__acoes">
+        <button type="button" class="pf-btn pf-btn--ghost" (click)="formAberto.set(false)">Cancelar</button>
+        <button type="submit" class="pf-btn pf-btn--primary">Salvar</button>
+      </div>
+    </form>
+  </pf-modal>
+}
+
+@if (paraExcluir(); as m) {
+  <pf-confirm
+    [message]="m.nome + ' será removido do cadastro. As fichas já lançadas não mudam.'"
+    (confirmar)="confirmarExclusao()"
+    (cancelar)="paraExcluir.set(null)"
+  />
+}

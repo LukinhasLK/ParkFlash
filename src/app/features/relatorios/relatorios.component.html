@@ -1,0 +1,113 @@
+<div class="pf-page relatorio">
+  <pf-page-header title="Relatórios" subtitle="Visão geral financeira por período">
+    <button type="button" class="pf-btn pf-btn--ghost" (click)="exportarPdf()">
+      <pf-icon name="baixar" [size]="17" />
+      Exportar PDF
+    </button>
+  </pf-page-header>
+
+  <div class="pf-filters nao-imprimir">
+    <select class="pf-select" [ngModel]="mes()" (ngModelChange)="mes.set(+$event)" aria-label="Mês">
+      <option [value]="0">Ano inteiro</option>
+      @for (nome of meses; track nome; let i = $index) {
+        <option [value]="i + 1">{{ nome }}</option>
+      }
+    </select>
+
+    <select class="pf-select" [ngModel]="ano()" (ngModelChange)="ano.set(+$event)" aria-label="Ano">
+      @for (a of anos; track a) { <option [value]="a">{{ a }}</option> }
+    </select>
+
+    <select class="pf-select" [ngModel]="unidade()" (ngModelChange)="unidade.set($event)" aria-label="Unidade">
+      <option [value]="todas">Todas as unidades</option>
+      @for (nome of unidades(); track nome) { <option [value]="nome">{{ nome }}</option> }
+    </select>
+  </div>
+
+  <p class="periodo">{{ periodoLabel() }} · {{ unidade() === todas ? 'todas as unidades' : unidade() }}</p>
+
+  <section class="cards-resumo">
+    <pf-kpi-card label="Receita total" [value]="resumo().bruto | currencyBr" [hint]="periodoLabel()" />
+    <pf-kpi-card label="Despesas total" [value]="resumo().despesas | currencyBr" [hint]="'inclui diárias e taxas'" tone="danger" />
+    <pf-kpi-card
+      label="Lucro líquido"
+      [value]="resumo().liquido | currencyBr"
+      [hint]="resumo().fichas + ' fichas no período'"
+      [tone]="resumo().liquido >= 0 ? 'success' : 'danger'"
+    />
+  </section>
+
+  @if (linhas().length === 0) {
+    <div class="pf-card vazio">
+      <p class="vazio__titulo">Nenhum lançamento neste período</p>
+      <p class="vazio__texto">Escolha outro mês, ano ou unidade.</p>
+    </div>
+  } @else if (isMobile()) {
+    <div class="cards">
+      @for (linha of linhas(); track linha.ficha.id) {
+        <article class="pf-card card-rel">
+          <div class="card-rel__topo">
+            <span class="card-rel__data">{{ linha.ficha.data | dataBr }}</span>
+            <span class="pf-badge" [class]="linha.ficha.turno === 'dia' ? 'pf-badge--blue' : 'pf-badge--night'">
+              {{ linha.ficha.turno === 'dia' ? 'Dia' : 'Noite' }}
+            </span>
+          </div>
+          <p class="card-rel__unidade">{{ linha.ficha.unidade }}</p>
+          <div class="card-rel__linha"><span>Receita</span><span>{{ linha.ficha.totalBruto | currencyBr }}</span></div>
+          <div class="card-rel__linha"><span>Despesas</span><span>{{ linha.despesas | currencyBr }}</span></div>
+          <div class="card-rel__linha card-rel__linha--forte">
+            <span>Saldo</span>
+            <span [class.pf-money--neg]="linha.ficha.totalLiquido < 0" [class.pf-money--pos]="linha.ficha.totalLiquido >= 0">
+              {{ linha.ficha.totalLiquido | currencyBr }}
+            </span>
+          </div>
+        </article>
+      }
+    </div>
+  } @else {
+    <div class="pf-card tabela">
+      <div class="pf-table-wrap">
+        <table class="pf-table">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Turno</th>
+              <th>Unidade</th>
+              <th class="num">Receita</th>
+              <th class="num">Despesas</th>
+              <th class="num">Saldo</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (linha of linhas(); track linha.ficha.id) {
+              <tr>
+                <td>{{ linha.ficha.data | dataBr }}</td>
+                <td>
+                  <span class="pf-badge" [class]="linha.ficha.turno === 'dia' ? 'pf-badge--blue' : 'pf-badge--night'">
+                    {{ linha.ficha.turno === 'dia' ? 'Dia' : 'Noite' }}
+                  </span>
+                </td>
+                <td>{{ linha.ficha.unidade }}</td>
+                <td class="num">{{ linha.ficha.totalBruto | currencyBr }}</td>
+                <td class="num">{{ linha.despesas | currencyBr }}</td>
+                <td class="num" [class.pf-money--neg]="linha.ficha.totalLiquido < 0" [class.pf-money--pos]="linha.ficha.totalLiquido >= 0">
+                  {{ linha.ficha.totalLiquido | currencyBr }}
+                </td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3">Total do período</td>
+              <td class="num">{{ resumo().bruto | currencyBr }}</td>
+              <td class="num">{{ resumo().despesas | currencyBr }}</td>
+              <td class="num" [class.pf-money--neg]="resumo().liquido < 0" [class.pf-money--pos]="resumo().liquido >= 0">
+                {{ resumo().liquido | currencyBr }}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  }
+</div>

@@ -1,0 +1,95 @@
+<div class="pf-page">
+  <pf-page-header title="Unidades" subtitle="Cadastre os locais onde o serviço é prestado">
+    <button type="button" class="pf-btn pf-btn--primary" (click)="abrir()">
+      <pf-icon name="plus" [size]="17" />
+      Nova unidade
+    </button>
+  </pf-page-header>
+
+  @if (unidades().length === 0) {
+    <div class="pf-card vazio">
+      <p class="vazio__titulo">Nenhuma unidade cadastrada</p>
+      <p class="vazio__texto">Cadastre a primeira unidade para começar a lançar fichas.</p>
+    </div>
+  } @else if (isMobile()) {
+    <div class="cards">
+      @for (u of unidades(); track u.id) {
+        <article class="pf-card card-unidade" (click)="abrir(u)">
+          <span class="card-unidade__icone"><pf-icon name="local" [size]="20" /></span>
+          <div class="card-unidade__info">
+            <p class="card-unidade__nome">{{ u.nome }}</p>
+            <p class="card-unidade__endereco">{{ u.endereco }}</p>
+            @if (u.telefone) { <p class="card-unidade__tel">{{ u.telefone }}</p> }
+          </div>
+          <button type="button" class="card-unidade__editar" aria-label="Editar unidade">
+            <pf-icon name="editar" [size]="18" />
+          </button>
+        </article>
+      }
+    </div>
+  } @else {
+    <div class="pf-card tabela">
+      <div class="pf-table-wrap">
+        <table class="pf-table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Endereço</th>
+              <th>Telefone</th>
+              <th class="actions">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (u of unidades(); track u.id) {
+              <tr>
+                <td class="forte">{{ u.nome }}</td>
+                <td>{{ u.endereco || '—' }}</td>
+                <td>{{ u.telefone || '—' }}</td>
+                <td class="actions">
+                  <button type="button" class="acao" (click)="abrir(u)">Editar</button>
+                  <button type="button" class="acao acao--danger" (click)="paraExcluir.set(u)">Excluir</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</div>
+
+@if (formAberto()) {
+  <pf-modal [title]="editando() ? 'Editar unidade' : 'Nova unidade'" (fechar)="formAberto.set(false)">
+    <form class="modal-form" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+      <div class="pf-field">
+        <label class="pf-label" for="u-nome">Nome</label>
+        <input id="u-nome" class="pf-input" type="text" formControlName="nome" />
+        @if (invalido('nome')) { <span class="pf-error">Informe o nome da unidade.</span> }
+      </div>
+
+      <div class="pf-field">
+        <label class="pf-label" for="u-endereco">Endereço</label>
+        <input id="u-endereco" class="pf-input" type="text" placeholder="Rua, número" formControlName="endereco" />
+        @if (invalido('endereco')) { <span class="pf-error">Informe o endereço.</span> }
+      </div>
+
+      <div class="pf-field">
+        <label class="pf-label" for="u-telefone">Telefone</label>
+        <input id="u-telefone" class="pf-input" type="tel" placeholder="(11) 0000-0000" formControlName="telefone" />
+      </div>
+
+      <div class="modal-form__acoes">
+        <button type="button" class="pf-btn pf-btn--ghost" (click)="formAberto.set(false)">Cancelar</button>
+        <button type="submit" class="pf-btn pf-btn--primary">Salvar</button>
+      </div>
+    </form>
+  </pf-modal>
+}
+
+@if (paraExcluir(); as u) {
+  <pf-confirm
+    [message]="'A unidade ' + u.nome + ' será removida. As fichas já lançadas não mudam.'"
+    (confirmar)="confirmarExclusao()"
+    (cancelar)="paraExcluir.set(null)"
+  />
+}

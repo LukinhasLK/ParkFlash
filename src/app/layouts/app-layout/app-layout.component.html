@@ -1,0 +1,23 @@
+@if (isMobile()) {
+  <div class="shell shell--mobile">
+    <header class="topbar">
+      <pf-logo [size]="17" />
+      @if (usuario(); as u) {
+        <span class="pf-avatar topbar__avatar" [style.background]="cor(u.nome)">{{ inicial() }}</span>
+      }
+    </header>
+
+    <main class="content content--mobile">
+      <router-outlet />
+    </main>
+
+    <pf-bottom-nav />
+  </div>
+} @else {
+  <div class="shell">
+    <pf-sidebar />
+    <main class="content">
+      <router-outlet />
+    </main>
+  </div>
+}

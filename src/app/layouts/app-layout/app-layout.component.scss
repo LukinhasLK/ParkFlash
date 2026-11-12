@@ -1,0 +1,32 @@
+.shell {
+  display: flex;
+  min-height: 100vh;
+  background: var(--pf-bg);
+}
+
+.shell--mobile { flex-direction: column; }
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+.content--mobile {
+  padding-bottom: calc(var(--pf-bottomnav-h) + env(safe-area-inset-bottom));
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 58px;
+  padding: 0 16px;
+  background: var(--pf-surface);
+  border-bottom: 1px solid var(--pf-border);
+}
+
+.topbar__avatar { width: 32px; height: 32px; font-size: 13px; }

@@ -1,0 +1,144 @@
+<div class="pf-page">
+  <pf-page-header title="Sócios" subtitle="Porcentagem de cada sócio por estabelecimento">
+    <button type="button" class="pf-btn pf-btn--primary" (click)="abrir()">
+      <pf-icon name="plus" [size]="17" />
+      Novo sócio
+    </button>
+  </pf-page-header>
+
+  <!-- Validação do rateio por unidade -->
+  <div class="validacao">
+    @for (t of totais(); track t.unidade) {
+      <span
+        class="validacao__item"
+        [class.validacao__item--erro]="!t.valido && !t.vazia"
+        [class.validacao__item--vazia]="t.vazia"
+      >
+        <pf-icon [name]="t.valido ? 'check' : 'alerta'" [size]="14" />
+        {{ t.unidade }}: {{ t.vazia ? 'sem rateio' : t.total + '%' }}
+      </span>
+    }
+  </div>
+
+  @if (socios().length === 0) {
+    <div class="pf-card vazio">
+      <p class="vazio__titulo">Nenhum sócio cadastrado</p>
+      <p class="vazio__texto">Cadastre os sócios para que o app calcule a divisão do lucro.</p>
+    </div>
+  } @else if (isMobile()) {
+    <div class="cards">
+      @for (s of socios(); track s.id) {
+        <article class="pf-card card-socio" (click)="abrir(s)">
+          <p class="card-socio__nome">{{ s.nome }}</p>
+          @if (participacoes(s).length) {
+            <ul class="card-socio__lista">
+              @for (p of participacoes(s); track p.unidade) {
+                <li><span>{{ p.unidade }}</span><span class="pf-badge pf-badge--gray">{{ p.percentual }}%</span></li>
+              }
+            </ul>
+          } @else {
+            <p class="card-socio__vazio">Sem participação ativa.</p>
+          }
+        </article>
+      }
+    </div>
+  } @else {
+    <div class="pf-card tabela">
+      <div class="pf-table-wrap">
+        <table class="pf-table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              @for (unidade of unidades(); track unidade) {
+                <th class="num">{{ unidade }}</th>
+              }
+              <th class="actions">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (s of socios(); track s.id) {
+              <tr>
+                <td class="forte">{{ s.nome }}</td>
+                @for (unidade of unidades(); track unidade) {
+                  <td class="num">
+                    @if (percentual(s, unidade); as pct) {
+                      <span class="pf-badge pf-badge--gray">{{ pct }}%</span>
+                    } @else {
+                      <span class="tracinho">—</span>
+                    }
+                  </td>
+                }
+                <td class="actions">
+                  <button type="button" class="acao" (click)="abrir(s)">Editar</button>
+                  <button type="button" class="acao acao--danger" (click)="paraExcluir.set(s)">Excluir</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</div>
+
+@if (formAberto()) {
+  <pf-modal [title]="editando() ? 'Editar sócio' : 'Novo sócio'" (fechar)="formAberto.set(false)">
+    <form class="modal-form" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
+      <div class="pf-field">
+        <label class="pf-label" for="s-nome">Nome</label>
+        <input id="s-nome" class="pf-input" type="text" formControlName="nome" />
+        @if (invalido('nome')) { <span class="pf-error">Informe o nome.</span> }
+      </div>
+
+      <p class="modal-form__secao">Participação por unidade</p>
+
+      <div formArrayName="percentuais" class="percentuais">
+        @for (grupo of percentuais.controls; track $index; let i = $index) {
+          <div class="percentuais__linha" [formGroupName]="i">
+            <span class="percentuais__unidade">{{ grupo.get('unidade')?.value }}</span>
+            <div class="percentuais__campo">
+              <input
+                class="pf-input"
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                inputmode="numeric"
+                formControlName="percentual"
+                [attr.aria-label]="'Percentual em ' + grupo.get('unidade')?.value"
+              />
+              <span class="percentuais__simbolo">%</span>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Prévia do fechamento -->
+      <ul class="previa">
+        @for (p of previa(); track p.unidade) {
+          <li class="previa__item" [class.previa__item--erro]="!p.valido">
+            <pf-icon [name]="p.valido ? 'check' : 'alerta'" [size]="14" />
+            <span>{{ p.unidade }} ficará com {{ p.total }}%</span>
+          </li>
+        }
+      </ul>
+      <p class="modal-form__nota">
+        O rateio de cada unidade precisa somar 100% para a divisão de lucro bater.
+        Você pode salvar mesmo assim e ajustar depois.
+      </p>
+
+      <div class="modal-form__acoes">
+        <button type="button" class="pf-btn pf-btn--ghost" (click)="formAberto.set(false)">Cancelar</button>
+        <button type="submit" class="pf-btn pf-btn--primary">Salvar</button>
+      </div>
+    </form>
+  </pf-modal>
+}
+
+@if (paraExcluir(); as s) {
+  <pf-confirm
+    [message]="s.nome + ' será removido. O rateio das unidades onde participa deixará de fechar em 100%.'"
+    (confirmar)="confirmarExclusao()"
+    (cancelar)="paraExcluir.set(null)"
+  />
+}

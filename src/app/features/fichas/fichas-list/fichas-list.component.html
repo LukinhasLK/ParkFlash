@@ -1,0 +1,177 @@
+<div class="pf-page">
+  <pf-page-header
+    title="Fichas"
+    [subtitle]="fichas().length + (fichas().length === 1 ? ' ficha encontrada' : ' fichas encontradas')"
+  >
+    <a class="pf-btn pf-btn--primary" routerLink="/app/fichas/nova">
+      <pf-icon name="plus" [size]="17" />
+      Nova ficha
+    </a>
+  </pf-page-header>
+
+  <!-- Filtros -->
+  <div class="pf-filters">
+    <input
+      class="pf-input pf-filters__search"
+      type="search"
+      placeholder="Buscar unidade ou data..."
+      [ngModel]="busca()"
+      (ngModelChange)="busca.set($event)"
+      aria-label="Buscar fichas"
+    />
+
+    <select class="pf-select" [ngModel]="mes()" (ngModelChange)="mes.set(+$event)" aria-label="Mês">
+      <option [value]="0">Todos os meses</option>
+      @for (nome of meses; track nome; let i = $index) {
+        <option [value]="i + 1">{{ nome }}</option>
+      }
+    </select>
+
+    <select class="pf-select" [ngModel]="ano()" (ngModelChange)="ano.set(+$event)" aria-label="Ano">
+      @for (a of anos; track a) {
+        <option [value]="a">{{ a }}</option>
+      }
+    </select>
+
+    <select class="pf-select" [ngModel]="unidade()" (ngModelChange)="unidade.set($event)" aria-label="Unidade">
+      <option [value]="todas">Todas as unidades</option>
+      @for (nome of unidades(); track nome) {
+        <option [value]="nome">{{ nome }}</option>
+      }
+    </select>
+  </div>
+
+  <!-- Resumo do período filtrado -->
+  <section class="pf-grid-kpi">
+    <pf-kpi-card label="Fichas" [value]="resumo().fichas | numeroBr" />
+    <pf-kpi-card label="Carros" [value]="resumo().carros | numeroBr" />
+    <pf-kpi-card label="Total bruto" [value]="resumo().bruto | currencyBr" />
+    <pf-kpi-card
+      label="Líquido"
+      [value]="resumo().liquido | currencyBr"
+      [tone]="resumo().liquido >= 0 ? 'success' : 'danger'"
+    />
+  </section>
+
+  <!-- Listagem -->
+  @if (fichas().length === 0) {
+    <div class="pf-card vazio">
+      <p class="vazio__titulo">Nenhuma ficha neste período</p>
+      <p class="vazio__texto">Ajuste os filtros ou lance a primeira ficha do mês.</p>
+      <button type="button" class="pf-btn pf-btn--ghost" (click)="limparFiltros()">Limpar filtros</button>
+    </div>
+  } @else if (isMobile()) {
+    <div class="cards">
+      @for (ficha of fichas(); track ficha.id) {
+        <article class="pf-card card-ficha" (click)="detalhe.set(ficha)">
+          <div class="card-ficha__info">
+            <p class="card-ficha__data">{{ ficha.data | dataBr }}</p>
+            <p class="card-ficha__meta">{{ ficha.unidade }} · {{ ficha.totalCarros | numeroBr }} carros</p>
+          </div>
+          <p class="card-ficha__valor" [class.pf-money--neg]="ficha.totalLiquido < 0" [class.pf-money--pos]="ficha.totalLiquido >= 0">
+            {{ ficha.totalLiquido | currencyBr }}
+          </p>
+        </article>
+      }
+    </div>
+  } @else {
+    <div class="pf-card tabela">
+      <div class="pf-table-wrap">
+        <table class="pf-table">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Unidade</th>
+              <th class="num">Carros</th>
+              <th class="num">Bruto</th>
+              <th class="num">Líquido</th>
+              <th class="actions">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (ficha of fichas(); track ficha.id) {
+              <tr>
+                <td>{{ ficha.data | dataBr }}</td>
+                <td>{{ ficha.unidade }}</td>
+                <td class="num">{{ ficha.totalCarros | numeroBr }}</td>
+                <td class="num">{{ ficha.totalBruto | currencyBr }}</td>
+                <td class="num" [class.pf-money--neg]="ficha.totalLiquido < 0" [class.pf-money--pos]="ficha.totalLiquido >= 0">
+                  {{ ficha.totalLiquido | currencyBr }}
+                </td>
+                <td class="actions">
+                  <button type="button" class="acao" (click)="detalhe.set(ficha)">Ver</button>
+                  <button type="button" class="acao acao--danger" (click)="paraExcluir.set(ficha)">Excluir</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</div>
+
+<!-- Detalhe -->
+@if (detalhe(); as ficha) {
+  <pf-modal [title]="'Ficha de ' + (ficha.data | dataBr)" (fechar)="detalhe.set(null)">
+    <dl class="det">
+      <div class="det__linha"><dt>Unidade</dt><dd>{{ ficha.unidade }}</dd></div>
+      <div class="det__linha"><dt>Turno</dt><dd>{{ ficha.turno === 'dia' ? 'Dia' : 'Noite' }}</dd></div>
+      <div class="det__linha">
+        <dt>Carros</dt>
+        <dd>{{ ficha.totalCarros | numeroBr }} <span class="det__nota">({{ ficha.fichaInicio }} → {{ ficha.fichaFim }}, {{ ficha.fichasCanceladas }} canceladas)</span></dd>
+      </div>
+
+      <div class="det__sep"></div>
+
+      <div class="det__linha"><dt>Dinheiro</dt><dd>{{ ficha.valorDinheiro | currencyBr }}</dd></div>
+      <div class="det__linha"><dt>Cartão</dt><dd>{{ ficha.valorCartao | currencyBr }}</dd></div>
+      @if (detalheCalculos(); as c) {
+        <div class="det__linha det__linha--neg"><dt>Taxa da maquininha ({{ ficha.taxaMaquininha }}%)</dt><dd>− {{ c.taxaDescontada | currencyBr }}</dd></div>
+        <div class="det__linha det__linha--neg"><dt>Diárias ({{ ficha.manobristas.length }})</dt><dd>− {{ c.totalDiarias | currencyBr }}</dd></div>
+        <div class="det__linha det__linha--neg"><dt>Despesas adicionais</dt><dd>− {{ c.totalDespesas | currencyBr }}</dd></div>
+      }
+
+      <div class="det__sep"></div>
+
+      <div class="det__linha det__linha--total">
+        <dt>Saldo final</dt>
+        <dd [class.pf-money--neg]="ficha.totalLiquido < 0" [class.pf-money--pos]="ficha.totalLiquido >= 0">
+          {{ ficha.totalLiquido | currencyBr }}
+        </dd>
+      </div>
+    </dl>
+
+    @if (ficha.manobristas.length) {
+      <p class="det__titulo">Equipe</p>
+      <ul class="det__lista">
+        @for (m of ficha.manobristas; track m.nome) {
+          <li><span>{{ m.nome }}</span><span>{{ m.diaria | currencyBr }}</span></li>
+        }
+      </ul>
+    }
+
+    @if (ficha.despesasAdicionais.length) {
+      <p class="det__titulo">Despesas adicionais</p>
+      <ul class="det__lista">
+        @for (d of ficha.despesasAdicionais; track d.descricao) {
+          <li><span>{{ d.descricao }}</span><span>{{ d.valor | currencyBr }}</span></li>
+        }
+      </ul>
+    }
+
+    <div class="det__acoes">
+      <button type="button" class="pf-btn pf-btn--ghost" (click)="paraExcluir.set(ficha); detalhe.set(null)">Excluir ficha</button>
+      <button type="button" class="pf-btn pf-btn--dark" (click)="detalhe.set(null)">Fechar</button>
+    </div>
+  </pf-modal>
+}
+
+<!-- Exclusão -->
+@if (paraExcluir(); as ficha) {
+  <pf-confirm
+    [message]="'A ficha de ' + (ficha.data | dataBr) + ' (' + ficha.unidade + ') será removida definitivamente.'"
+    (confirmar)="confirmarExclusao()"
+    (cancelar)="paraExcluir.set(null)"
+  />
+}
