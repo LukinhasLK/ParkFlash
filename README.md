@@ -134,16 +134,26 @@ A documentação interativa da API fica em **http://localhost:8080/swagger-ui.ht
 <details>
 <summary><strong>Usando PostgreSQL</strong></summary>
 
-Com o PostgreSQL instalado, crie o banco e rode o back end com o perfil `postgres`:
+O jeito mais rápido é com o `docker-compose.yml` do repositório (precisa só do Docker):
 
 ```bash
-createdb parkflash
+# 1) sobe o PostgreSQL na porta 5432 com o banco `parkflash` já criado
+docker compose up -d
+
+# 2) roda o back end com o perfil postgres
 cd backend
 SPRING_PROFILES_ACTIVE=postgres JWT_SEGREDO=um-segredo-longo-com-32-caracteres-ou-mais \
-  DB_USUARIO=postgres DB_SENHA=sua-senha ./mvnw spring-boot:run
+  DB_USUARIO=parkflash DB_SENHA=parkflash ./mvnw spring-boot:run
 ```
 
-As mesmas migrações Flyway criam as tabelas no PostgreSQL.
+As migrações Flyway criam as tabelas e carregam os dados de demonstração automaticamente.
+`docker compose down` para o banco; `docker compose down -v` apaga os dados também.
+
+Sem Docker, vale o mesmo caminho com um PostgreSQL instalado: `createdb parkflash` e ajuste
+`DB_URL`, `DB_USUARIO` e `DB_SENHA`.
+
+> Para um deploy de verdade, basta apontar `DB_URL` para o PostgreSQL do servidor —
+> o mesmo perfil `postgres` serve. O front é publicado com `npm run build` (pasta `dist/`).
 </details>
 
 ## Usuários de demonstração
