@@ -262,7 +262,8 @@
           </div>
 
           @if (divisao().length) {
-            <p class="resumo__subtitulo">Divisão entre Sócios</p>
+            <p class="resumo__subtitulo">Participação no saldo desta ficha</p>
+            <p class="resumo__aviso">Prévia sem despesas fixas; o rateio do mês fica em Divisão de Lucro.</p>
             <ul class="resumo__socios">
               @for (parte of divisao(); track parte.nome) {
                 <li>
@@ -274,7 +275,7 @@
           } @else if (form.controls.unidadeId.value) {
             <p class="resumo__aviso">Esta unidade ainda não tem sócios cadastrados.</p>
           } @else {
-            <p class="resumo__aviso">Selecione a unidade para ver a divisão entre sócios.</p>
+            <p class="resumo__aviso">Selecione a unidade para ver a participação dos sócios.</p>
           }
 
           @if (!isMobile()) {

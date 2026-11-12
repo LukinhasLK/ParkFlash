@@ -1,6 +1,7 @@
-import { computed, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { Ficha } from '../models';
 import { despesasDaFicha, round2 } from './calc';
+import { DespesasService } from './despesas.service';
 import { anoDe, diaDaSemana, DIAS_SEMANA, diaDe, Filtro, formatarData, hojeIso, mesDe, noPeriodo, Periodo } from './periodo';
 import { FICHAS_SEED } from './seed';
 import { carregar, salvar } from './storage';
@@ -30,6 +31,7 @@ export interface ResumoMes {
 
 @Injectable({ providedIn: 'root' })
 export class FichasService {
+  private readonly despesasService = inject(DespesasService);
   private readonly _fichas = signal<Ficha[]>(carregar(CHAVE, FICHAS_SEED));
 
   readonly fichas = this._fichas.asReadonly();
@@ -45,9 +47,13 @@ export class FichasService {
     return { mes: mesDe(maisRecente), ano: anoDe(maisRecente) };
   });
 
-  /** Anos com fichas mais o ano atual, do mais recente ao mais antigo. */
+  /** Anos com fichas ou despesas fixas mais o ano atual, do mais recente ao mais antigo. */
   readonly anosDisponiveis = computed(() => {
-    const anos = new Set([anoDe(hojeIso()), ...this._fichas().map((f) => anoDe(f.data))]);
+    const anos = new Set([
+      anoDe(hojeIso()),
+      ...this._fichas().map((f) => anoDe(f.data)),
+      ...this.despesasService.despesas().map((d) => anoDe(d.data)),
+    ]);
     return [...anos].sort((a, b) => b - a);
   });
 

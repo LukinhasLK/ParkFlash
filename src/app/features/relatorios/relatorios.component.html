@@ -46,8 +46,14 @@
 
   @if (linhas().length === 0) {
     <div class="pf-card vazio">
-      <p class="vazio__titulo">Nenhum lançamento neste período</p>
-      <p class="vazio__texto">Escolha outro mês, ano ou unidade.</p>
+      <p class="vazio__titulo">Nenhuma ficha neste período</p>
+      @if (despesasFixas() > 0) {
+        <p class="vazio__texto">
+          O resultado de {{ resultado() | currencyBr }} vem só das despesas fixas ({{ despesasFixas() | currencyBr }}).
+        </p>
+      } @else {
+        <p class="vazio__texto">Escolha outro mês, ano ou unidade.</p>
+      }
     </div>
   } @else if (isMobile()) {
     <div class="cards">

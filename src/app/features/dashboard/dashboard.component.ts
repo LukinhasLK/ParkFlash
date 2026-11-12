@@ -6,6 +6,7 @@ import { DespesasService } from '../../core/services/despesas.service';
 import { FichasService } from '../../core/services/fichas.service';
 import { LayoutService } from '../../core/services/layout.service';
 import { calcResultado } from '../../core/services/calc';
+import { podeAcessar } from '../../core/services/permissoes';
 import { MESES, MESES_CURTOS, rotuloPeriodo, TODAS_UNIDADES } from '../../core/services/periodo';
 import { SociosService } from '../../core/services/socios.service';
 import { ChartComponent } from '../../shared/charts/chart.component';
@@ -51,12 +52,14 @@ export class DashboardComponent {
     const alertas: { texto: string; rota: string }[] = [];
     const mes = MESES[this.filtro().mes - 1].toLowerCase();
 
-    for (const t of this.sociosService.totaisPorUnidade()) {
-      if (!t.valido) {
-        alertas.push({
-          texto: t.vazia ? `${t.unidade} não tem sócios cadastrados` : `Rateio de ${t.unidade} soma ${t.total}% (precisa de 100%)`,
-          rota: '/app/socios',
-        });
+    if (podeAcessar(this.auth.usuario()?.nivel, 'socios')) {
+      for (const t of this.sociosService.totaisPorUnidade()) {
+        if (!t.valido) {
+          alertas.push({
+            texto: t.vazia ? `${t.unidade} não tem sócios cadastrados` : `Rateio de ${t.unidade} soma ${t.total}% (precisa de 100%)`,
+            rota: '/app/socios',
+          });
+        }
       }
     }
 
