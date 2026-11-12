@@ -7,6 +7,7 @@ import { UnidadesService } from './unidades.service';
 const CHAVE = 'parkflash.socios';
 
 export interface TotalUnidade {
+  unidadeId: number;
   unidade: string;
   total: number;
   /** Fecha em 100% — pronto para dividir lucro. */
@@ -24,12 +25,12 @@ export class SociosService {
 
   /** Soma dos percentuais por unidade — precisa fechar em 100%. */
   readonly totaisPorUnidade = computed<TotalUnidade[]>(() =>
-    this.unidadesService.nomes().map((unidade) => {
+    this.unidadesService.unidades().map(({ id, nome }) => {
       const total = this._socios().reduce(
-        (soma, socio) => soma + (socio.percentuais.find((p) => p.unidade === unidade)?.percentual ?? 0),
+        (soma, socio) => soma + (socio.percentuais.find((p) => p.unidadeId === id)?.percentual ?? 0),
         0
       );
-      return { unidade, total, valido: total === 100, vazia: total === 0 };
+      return { unidadeId: id, unidade: nome, total, valido: total === 100, vazia: total === 0 };
     })
   );
 
@@ -38,12 +39,12 @@ export class SociosService {
     this.totaisPorUnidade().filter((t) => t.total > 0)
   );
 
-  percentual(socio: Socio, unidade: string): number | null {
-    return socio.percentuais.find((p) => p.unidade === unidade)?.percentual ?? null;
+  percentual(socio: Socio, unidadeId: number): number | null {
+    return socio.percentuais.find((p) => p.unidadeId === unidadeId)?.percentual ?? null;
   }
 
-  sociosDaUnidade(unidade: string): Socio[] {
-    return this._socios().filter((s) => s.percentuais.some((p) => p.unidade === unidade && p.percentual > 0));
+  sociosDaUnidade(unidadeId: number): Socio[] {
+    return this._socios().filter((s) => s.percentuais.some((p) => p.unidadeId === unidadeId && p.percentual > 0));
   }
 
   salvarSocio(socio: Omit<Socio, 'id'> & { id?: number }): void {
@@ -53,6 +54,14 @@ export class SociosService {
       socio.id
         ? lista.map((s) => (s.id === socio.id ? { ...s, nome: socio.nome, percentuais } : s))
         : [...lista, { nome: socio.nome, percentuais, id: lista.reduce((maior, s) => Math.max(maior, s.id), 0) + 1 }]
+    );
+    this.persistir();
+  }
+
+  /** Remove a participação de todos os sócios numa unidade excluída. */
+  removerUnidade(unidadeId: number): void {
+    this._socios.update((lista) =>
+      lista.map((s) => ({ ...s, percentuais: s.percentuais.filter((p) => p.unidadeId !== unidadeId) }))
     );
     this.persistir();
   }

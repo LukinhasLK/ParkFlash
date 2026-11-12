@@ -3,7 +3,7 @@
     <header class="topbar">
       <pf-logo [size]="17" />
       @if (usuario(); as u) {
-        <span class="pf-avatar topbar__avatar" [style.background]="cor(u.nome)">{{ inicial() }}</span>
+        <a class="pf-avatar topbar__avatar" routerLink="/app/perfil" aria-label="Meu perfil" [style.background]="cor(u.nome)">{{ inicial() }}</a>
       }
     </header>
 

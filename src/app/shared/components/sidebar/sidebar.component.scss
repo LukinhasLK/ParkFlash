@@ -57,6 +57,19 @@
   border-top: 1px solid rgba(255, 255, 255, .07);
 }
 
+.sidebar__user-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 8px;
+
+  &:hover .sidebar__user-name { text-decoration: underline; }
+}
+
 .sidebar__user-info {
   display: flex;
   flex-direction: column;

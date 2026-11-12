@@ -78,6 +78,15 @@
 
 .card__esqueci { align-self: center; }
 
+.card__ajuda {
+  font-size: 13px;
+  color: var(--pf-text-muted);
+  background: var(--pf-surface-alt, #f1f5f9);
+  border-radius: var(--pf-radius-sm);
+  padding: 10px 12px;
+  text-align: center;
+}
+
 /* Mobile ----------------------------------------------------------------- */
 .login--mobile {
   flex-direction: column;

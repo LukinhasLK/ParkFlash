@@ -1,34 +1,54 @@
-import { computed, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { Usuario } from '../models';
-import { USUARIOS_SEED } from './seed';
 import { carregar, remover, salvar } from './storage';
+import { UsuariosService } from './usuarios.service';
 
-const CHAVE = 'parkflash.usuario';
+const CHAVE = 'parkflash.sessao';
 
+/**
+ * Autenticação de demonstração: confere e-mail/nome e senha no cadastro de usuários
+ * (localStorage). Com o back end, `login` passa a chamar POST /auth/login e guardar o JWT.
+ */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly _usuario = signal<Usuario | null>(carregar<Usuario | null>(CHAVE, null));
+  private readonly usuariosService = inject(UsuariosService);
+  private readonly _usuarioId = signal<number | null>(carregar<number | null>(CHAVE, null));
 
-  readonly usuario = this._usuario.asReadonly();
-  readonly autenticado = computed(() => this._usuario() !== null);
-  readonly inicial = computed(() => this._usuario()?.nome.charAt(0).toUpperCase() ?? '?');
+  readonly usuario = computed<Usuario | null>(() => {
+    const id = this._usuarioId();
+    const encontrado = this.usuariosService.usuarios().find((u) => u.id === id);
+    if (!encontrado) return null;
+    const { senha: _senha, ...semSenha } = encontrado;
+    return semSenha;
+  });
+  readonly autenticado = computed(() => this.usuario() !== null);
+  readonly nivel = computed(() => this.usuario()?.nivel ?? null);
+  readonly inicial = computed(() => this.usuario()?.nome.charAt(0).toUpperCase() ?? '?');
 
-  /** Demo: qualquer senha entra; o e-mail apenas escolhe o usuário da sessão. */
   login(identificador: string, senha: string): boolean {
-    if (!identificador.trim() || !senha) return false;
-
     const busca = identificador.trim().toLowerCase();
-    const encontrado =
-      USUARIOS_SEED.find((u) => u.email.toLowerCase() === busca || u.nome.toLowerCase() === busca) ??
-      USUARIOS_SEED[0];
+    if (!busca || !senha) return false;
 
-    this._usuario.set(encontrado);
-    salvar(CHAVE, encontrado);
+    const encontrado = this.usuariosService
+      .usuarios()
+      .find((u) => (u.email.toLowerCase() === busca || u.nome.toLowerCase() === busca) && u.senha === senha);
+    if (!encontrado) return false;
+
+    this._usuarioId.set(encontrado.id);
+    salvar(CHAVE, encontrado.id);
+    return true;
+  }
+
+  trocarSenha(senhaAtual: string, novaSenha: string): boolean {
+    const id = this._usuarioId();
+    const atual = this.usuariosService.usuarios().find((u) => u.id === id);
+    if (!atual || atual.senha !== senhaAtual) return false;
+    this.usuariosService.salvarUsuario({ ...atual, senha: novaSenha });
     return true;
   }
 
   logout(): void {
-    this._usuario.set(null);
+    this._usuarioId.set(null);
     remover(CHAVE);
   }
 }

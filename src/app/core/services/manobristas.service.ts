@@ -12,6 +12,10 @@ export class ManobristasService {
   readonly manobristas = this._manobristas.asReadonly();
   readonly nomes = computed(() => this._manobristas().map((m) => m.nome));
 
+  nome(id: number): string {
+    return this._manobristas().find((m) => m.id === id)?.nome ?? '—';
+  }
+
   salvarManobrista(manobrista: Omit<Manobrista, 'id'> & { id?: number }): Manobrista {
     let resultado!: Manobrista;
 

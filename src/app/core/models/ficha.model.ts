@@ -1,7 +1,7 @@
 export type Turno = 'dia' | 'noite';
 
 export interface ManobristaFicha {
-  nome: string;
+  manobristaId: number;
   diaria: number;
 }
 
@@ -13,7 +13,7 @@ export interface DespesaAdicional {
 export interface Ficha {
   id: number;
   data: string;
-  unidade: string;
+  unidadeId: number;
   turno: Turno;
   fichaInicio: number;
   fichaFim: number;

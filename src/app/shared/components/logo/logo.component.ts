@@ -23,6 +23,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
     .logo__mark { font-size: .95em; }
     .logo__park { color: var(--pf-primary); }
     .logo--dark .logo__park { color: #fff; }
+    .logo--dark .logo__mark { color: #facc15; }
     .logo__flash { color: var(--pf-accent); }
   `],
 })

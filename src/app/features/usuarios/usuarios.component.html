@@ -75,6 +75,7 @@
         <label class="pf-label" for="us-email">E-mail</label>
         <input id="us-email" class="pf-input" type="email" placeholder="nome@email.com" formControlName="email" />
         @if (invalido('email')) { <span class="pf-error">Informe um e-mail válido.</span> }
+        @if (emailDuplicado()) { <span class="pf-error">Este e-mail já está em uso.</span> }
       </div>
 
       <div class="pf-field">
@@ -82,6 +83,19 @@
         <select id="us-nivel" class="pf-select" formControlName="nivel">
           @for (n of niveis; track n) { <option [value]="n">{{ n }}</option> }
         </select>
+      </div>
+
+      <div class="pf-field">
+        <label class="pf-label" for="us-senha">{{ editando() ? 'Nova senha (opcional)' : 'Senha' }}</label>
+        <input
+          id="us-senha"
+          class="pf-input"
+          type="password"
+          autocomplete="new-password"
+          [placeholder]="editando() ? 'Deixe em branco para manter' : 'Mínimo de 6 caracteres'"
+          formControlName="senha"
+        />
+        @if (invalido('senha')) { <span class="pf-error">A senha precisa ter ao menos 6 caracteres.</span> }
       </div>
 
       <div class="modal-form__acoes">

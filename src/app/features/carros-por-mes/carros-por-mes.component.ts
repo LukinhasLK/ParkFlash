@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { ChartConfiguration } from 'chart.js';
 import { FichasService } from '../../core/services/fichas.service';
 import { LayoutService } from '../../core/services/layout.service';
-import { ANO_ATUAL, ANOS_DISPONIVEIS, MESES, MESES_CURTOS, TODAS_UNIDADES } from '../../core/services/periodo';
+import { MESES, MESES_CURTOS, TODAS_UNIDADES } from '../../core/services/periodo';
 import { UnidadesService } from '../../core/services/unidades.service';
 import { ChartComponent } from '../../shared/charts/chart.component';
 import { AZUL, escalasPadrao, formatarNumero, opcoesBase } from '../../shared/charts/chart-theme';
@@ -26,19 +26,19 @@ export class CarrosPorMesComponent {
 
   protected readonly isMobile = inject(LayoutService).isMobile;
   protected readonly meses = MESES;
-  protected readonly anos = ANOS_DISPONIVEIS;
-  protected readonly unidades = this.unidadesService.nomes;
+  protected readonly anos = this.fichasService.anosDisponiveis;
+  protected readonly unidades = this.unidadesService.unidades;
   protected readonly todas = TODAS_UNIDADES;
 
-  protected readonly anoEdicao = signal(ANO_ATUAL);
-  protected readonly unidadeEdicao = signal(TODAS_UNIDADES);
+  protected readonly ano = signal(this.fichasService.periodoReferencia().ano);
+  protected readonly unidadeId = signal(TODAS_UNIDADES);
 
-  private readonly consulta = signal({ ano: ANO_ATUAL, unidade: TODAS_UNIDADES });
+  private readonly consulta = computed(() => ({ ano: this.ano(), unidadeId: this.unidadeId() }));
 
   protected readonly anoConsultado = computed(() => this.consulta().ano);
 
   private readonly resumoAnual = computed(() =>
-    this.fichasService.resumoMensal(this.consulta().ano, this.consulta().unidade)
+    this.fichasService.resumoMensal(this.consulta().ano, this.consulta().unidadeId)
   );
 
   /** Só os meses que tiveram movimento entram na tabela e nas médias. */
@@ -60,17 +60,18 @@ export class CarrosPorMesComponent {
     return comDados.length ? Math.round(this.totalCarros() / comDados.length) : 0;
   });
 
-  /** Variação sobre o mesmo recorte do ano anterior. */
+  /** Variação sobre os mesmos meses do ano anterior (ex.: jan–jun × jan–jun). */
   protected readonly comparativo = computed(() => {
-    const anterior = this.fichasService
-      .resumoMensal(this.consulta().ano - 1, this.consulta().unidade)
+    const meses = new Set(this.mesesComDados().map((m) => m.mes));
+    const base = this.fichasService
+      .resumoMensal(this.consulta().ano - 1, this.consulta().unidadeId)
+      .filter((m) => meses.has(m.mes))
       .reduce((soma, m) => soma + m.carros, 0);
 
-    const base = anterior || this.fichasService.carrosAnoAnterior;
     if (!base) return null;
 
     const variacao = Math.round(((this.totalCarros() - base) / base) * 100);
-    return { variacao, base };
+    return { variacao, base, meses: meses.size };
   });
 
   protected readonly grafico = computed<ChartConfiguration>(() => {
@@ -111,10 +112,6 @@ export class CarrosPorMesComponent {
       },
     };
   });
-
-  protected buscar(): void {
-    this.consulta.set({ ano: this.anoEdicao(), unidade: this.unidadeEdicao() });
-  }
 
   protected nomeMes(mes: number): string {
     return MESES[mes - 1];

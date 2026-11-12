@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, computed } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
-import { BOTTOM_NAV_ITEMS, MAIS_ITEMS } from '../../nav-items';
+import { BOTTOM_NAV_ITEMS, itensPermitidos, NAV_ITEMS, PERFIL_ITEM } from '../../nav-items';
 import { IconComponent } from '../icon/icon.component';
 
 @Component({
@@ -16,8 +16,11 @@ export class BottomNavComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
-  protected readonly itens = BOTTOM_NAV_ITEMS;
-  protected readonly maisItens = MAIS_ITEMS;
+  protected readonly itens = computed(() => itensPermitidos(BOTTOM_NAV_ITEMS, this.auth.nivel()));
+  protected readonly maisItens = computed(() => [
+    ...itensPermitidos(NAV_ITEMS, this.auth.nivel()).filter((item) => !this.itens().some((b) => b.rota === item.rota)),
+    PERFIL_ITEM,
+  ]);
   protected readonly maisAberto = signal(false);
 
   protected alternarMais(): void {

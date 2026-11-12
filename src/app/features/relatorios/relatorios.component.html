@@ -15,25 +15,32 @@
     </select>
 
     <select class="pf-select" [ngModel]="ano()" (ngModelChange)="ano.set(+$event)" aria-label="Ano">
-      @for (a of anos; track a) { <option [value]="a">{{ a }}</option> }
+      @for (a of anos(); track a) { <option [value]="a">{{ a }}</option> }
     </select>
 
-    <select class="pf-select" [ngModel]="unidade()" (ngModelChange)="unidade.set($event)" aria-label="Unidade">
-      <option [value]="todas">Todas as unidades</option>
-      @for (nome of unidades(); track nome) { <option [value]="nome">{{ nome }}</option> }
+    <select class="pf-select" [ngModel]="unidadeId()" (ngModelChange)="unidadeId.set($event)" aria-label="Unidade">
+      <option [ngValue]="todas">Todas as unidades</option>
+      @for (u of unidades(); track u.id) { <option [ngValue]="u.id">{{ u.nome }}</option> }
     </select>
   </div>
 
-  <p class="periodo">{{ periodoLabel() }} · {{ unidade() === todas ? 'todas as unidades' : unidade() }}</p>
+  <p class="periodo">{{ periodoLabel() }} · {{ unidadeLabel() }}</p>
 
   <section class="cards-resumo">
     <pf-kpi-card label="Receita total" [value]="resumo().bruto | currencyBr" [hint]="periodoLabel()" />
-    <pf-kpi-card label="Despesas total" [value]="resumo().despesas | currencyBr" [hint]="'inclui diárias e taxas'" tone="danger" />
+    <pf-kpi-card label="Custos das fichas" [value]="resumo().despesas | currencyBr" hint="diárias, taxas e gastos da ficha" tone="danger" />
     <pf-kpi-card
-      label="Lucro líquido"
+      label="Lucro das fichas"
       [value]="resumo().liquido | currencyBr"
       [hint]="resumo().fichas + ' fichas no período'"
       [tone]="resumo().liquido >= 0 ? 'success' : 'danger'"
+    />
+    <pf-kpi-card label="Despesas fixas" [value]="despesasFixas() | currencyBr" hint="aluguel, seguro, manutenção" tone="danger" />
+    <pf-kpi-card
+      label="Resultado do período"
+      [value]="resultado() | currencyBr"
+      hint="lucro das fichas − despesas fixas"
+      [tone]="resultado() >= 0 ? 'success' : 'danger'"
     />
   </section>
 
@@ -52,9 +59,9 @@
               {{ linha.ficha.turno === 'dia' ? 'Dia' : 'Noite' }}
             </span>
           </div>
-          <p class="card-rel__unidade">{{ linha.ficha.unidade }}</p>
+          <p class="card-rel__unidade">{{ nomeUnidade(linha.ficha.unidadeId) }}</p>
           <div class="card-rel__linha"><span>Receita</span><span>{{ linha.ficha.totalBruto | currencyBr }}</span></div>
-          <div class="card-rel__linha"><span>Despesas</span><span>{{ linha.despesas | currencyBr }}</span></div>
+          <div class="card-rel__linha"><span>Custos</span><span>{{ linha.despesas | currencyBr }}</span></div>
           <div class="card-rel__linha card-rel__linha--forte">
             <span>Saldo</span>
             <span [class.pf-money--neg]="linha.ficha.totalLiquido < 0" [class.pf-money--pos]="linha.ficha.totalLiquido >= 0">
@@ -74,7 +81,7 @@
               <th>Turno</th>
               <th>Unidade</th>
               <th class="num">Receita</th>
-              <th class="num">Despesas</th>
+              <th class="num">Custos</th>
               <th class="num">Saldo</th>
             </tr>
           </thead>
@@ -87,7 +94,7 @@
                     {{ linha.ficha.turno === 'dia' ? 'Dia' : 'Noite' }}
                   </span>
                 </td>
-                <td>{{ linha.ficha.unidade }}</td>
+                <td>{{ nomeUnidade(linha.ficha.unidadeId) }}</td>
                 <td class="num">{{ linha.ficha.totalBruto | currencyBr }}</td>
                 <td class="num">{{ linha.despesas | currencyBr }}</td>
                 <td class="num" [class.pf-money--neg]="linha.ficha.totalLiquido < 0" [class.pf-money--pos]="linha.ficha.totalLiquido >= 0">
@@ -103,6 +110,16 @@
               <td class="num">{{ resumo().despesas | currencyBr }}</td>
               <td class="num" [class.pf-money--neg]="resumo().liquido < 0" [class.pf-money--pos]="resumo().liquido >= 0">
                 {{ resumo().liquido | currencyBr }}
+              </td>
+            </tr>
+            <tr>
+              <td colspan="5">(−) Despesas fixas do período</td>
+              <td class="num pf-money--neg">{{ despesasFixas() | currencyBr }}</td>
+            </tr>
+            <tr>
+              <td colspan="5">Resultado do período</td>
+              <td class="num" [class.pf-money--neg]="resultado() < 0" [class.pf-money--pos]="resultado() >= 0">
+                {{ resultado() | currencyBr }}
               </td>
             </tr>
           </tfoot>

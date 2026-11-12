@@ -8,6 +8,9 @@ import { Despesa, Ficha, Manobrista, Socio, Unidade, Usuario, Turno, CategoriaDe
  * geradas para bater exatamente com a tabela de "Carros por Mês".
  */
 
+const OPTUM = 1;
+const MANIFESTO = 2;
+
 export const UNIDADES_SEED: Unidade[] = [
   { id: 1, nome: 'Optum', endereco: 'Rua Quata, 1016', telefone: '' },
   { id: 2, nome: 'Manifesto', endereco: 'Rua Ramos Batista', telefone: '' },
@@ -15,12 +18,12 @@ export const UNIDADES_SEED: Unidade[] = [
 ];
 
 export const MANOBRISTAS_SEED: Manobrista[] = [
-  { id: 1, nome: 'Dario', telefone: '(11) 98765-4321', cpf: '412.336.789-01', diasNoMes: 12, totalRecebido: 960 },
-  { id: 2, nome: 'Jamaica', telefone: '(11) 99123-8890', cpf: '305.221.447-92', diasNoMes: 10, totalRecebido: 800 },
-  { id: 3, nome: 'Marcelo', telefone: '(11) 97456-2201', cpf: '128.909.556-30', diasNoMes: 8, totalRecebido: 640 },
-  { id: 4, nome: 'Ricardo', telefone: '(11) 98890-7734', cpf: '674.113.208-45', diasNoMes: 15, totalRecebido: 1200 },
-  { id: 5, nome: 'Caue', telefone: '(11) 96678-1120', cpf: '890.554.312-77', diasNoMes: 6, totalRecebido: 480 },
-  { id: 6, nome: 'Adriano', telefone: '(11) 99001-4567', cpf: '553.887.019-64', diasNoMes: 11, totalRecebido: 880 },
+  { id: 1, nome: 'Dario', telefone: '(11) 98765-4321', cpf: '412.336.789-57' },
+  { id: 2, nome: 'Jamaica', telefone: '(11) 99123-8890', cpf: '305.221.447-05' },
+  { id: 3, nome: 'Marcelo', telefone: '(11) 97456-2201', cpf: '128.909.556-64' },
+  { id: 4, nome: 'Ricardo', telefone: '(11) 98890-7734', cpf: '674.113.208-20' },
+  { id: 5, nome: 'Caue', telefone: '(11) 96678-1120', cpf: '890.554.312-06' },
+  { id: 6, nome: 'Adriano', telefone: '(11) 99001-4567', cpf: '553.887.019-72' },
 ];
 
 export const SOCIOS_SEED: Socio[] = [
@@ -28,33 +31,36 @@ export const SOCIOS_SEED: Socio[] = [
     id: 1,
     nome: 'Francisco',
     percentuais: [
-      { unidade: 'Optum', percentual: 40 },
-      { unidade: 'Manifesto', percentual: 50 },
+      { unidadeId: OPTUM, percentual: 40 },
+      { unidadeId: MANIFESTO, percentual: 50 },
     ],
   },
   {
     id: 2,
     nome: 'Lucas',
-    percentuais: [{ unidade: 'Optum', percentual: 20 }],
+    percentuais: [{ unidadeId: OPTUM, percentual: 20 }],
   },
   {
     id: 3,
     nome: 'Henrique',
     percentuais: [
-      { unidade: 'Optum', percentual: 40 },
-      { unidade: 'Manifesto', percentual: 50 },
+      { unidadeId: OPTUM, percentual: 40 },
+      { unidadeId: MANIFESTO, percentual: 50 },
     ],
   },
 ];
 
+/** Senha de todos os usuários de demonstração. */
+export const SENHA_DEMO = '123456';
+
 export const USUARIOS_SEED: Usuario[] = [
-  { id: 1, nome: 'Lucas', email: 'lucasrodrigues.10@icloud.com', nivel: 'Proprietário' },
-  { id: 2, nome: 'Pedro Henrique', email: 'pedro@email.com', nivel: 'Gerente' },
-  { id: 3, nome: 'Dario', email: 'dario@email.com', nivel: 'Operador' },
+  { id: 1, nome: 'Lucas', email: 'lucasrodrigues.10@icloud.com', nivel: 'Proprietário', senha: SENHA_DEMO },
+  { id: 2, nome: 'Pedro Henrique', email: 'pedro@email.com', nivel: 'Gerente', senha: SENHA_DEMO },
+  { id: 3, nome: 'Dario', email: 'dario@email.com', nivel: 'Operador', senha: SENHA_DEMO },
 ];
 
 /** Preço praticado por carro em cada unidade. */
-const PRECO_POR_CARRO: Record<string, number> = { Optum: 60, Manifesto: 40, Beef: 50 };
+const PRECO_POR_CARRO: Record<number, number> = { [OPTUM]: 60, [MANIFESTO]: 40, 3: 50 };
 
 const DIARIA = 80;
 const TAXA_MAQUININHA = 2;
@@ -63,7 +69,7 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 
 interface FichaSpec {
   data: string;
-  unidade: string;
+  unidadeId: number;
   turno: Turno;
   carros: number;
   liquido: number;
@@ -75,7 +81,7 @@ interface FichaSpec {
  * restante vira despesa adicional para fechar exatamente no líquido alvo.
  */
 function montarFicha(id: number, spec: FichaSpec): Ficha {
-  const preco = PRECO_POR_CARRO[spec.unidade] ?? 50;
+  const preco = PRECO_POR_CARRO[spec.unidadeId] ?? 50;
   const totalBruto = round2(spec.carros * preco);
 
   const valorCartao = round2(totalBruto * 0.6);
@@ -83,7 +89,7 @@ function montarFicha(id: number, spec: FichaSpec): Ficha {
   const liquidoCartao = round2(valorCartao - valorCartao * (TAXA_MAQUININHA / 100));
 
   const equipe = [MANOBRISTAS_SEED[id % 6], MANOBRISTAS_SEED[(id + 3) % 6]];
-  const manobristas = equipe.map((m) => ({ nome: m.nome, diaria: DIARIA }));
+  const manobristas = equipe.map((m) => ({ manobristaId: m.id, diaria: DIARIA }));
   const totalDiarias = manobristas.length * DIARIA;
 
   const despesaFechamento = round2(valorDinheiro + liquidoCartao - totalDiarias - spec.liquido);
@@ -98,7 +104,7 @@ function montarFicha(id: number, spec: FichaSpec): Ficha {
   return {
     id,
     data: spec.data,
-    unidade: spec.unidade,
+    unidadeId: spec.unidadeId,
     turno: spec.turno,
     fichaInicio,
     fichaFim,
@@ -116,18 +122,20 @@ function montarFicha(id: number, spec: FichaSpec): Ficha {
 
 /** Fichas de junho/2026 — exatamente as do briefing. */
 const JUNHO: FichaSpec[] = [
-  { data: '2026-06-07', unidade: 'Manifesto', turno: 'dia', carros: 21, liquido: -842 },
-  { data: '2026-06-06', unidade: 'Optum', turno: 'dia', carros: 92, liquido: 1636.75 },
-  { data: '2026-06-06', unidade: 'Manifesto', turno: 'noite', carros: 30, liquido: 660 },
-  { data: '2026-06-05', unidade: 'Optum', turno: 'dia', carros: 164, liquido: 1413 },
-  { data: '2026-06-05', unidade: 'Manifesto', turno: 'dia', carros: 22, liquido: 356 },
-  { data: '2026-06-04', unidade: 'Optum', turno: 'dia', carros: 37, liquido: 711.5 },
-  { data: '2026-06-03', unidade: 'Optum', turno: 'dia', carros: 59, liquido: 1600 },
-  { data: '2026-06-02', unidade: 'Manifesto', turno: 'dia', carros: 39, liquido: -158 },
+  { data: '2026-06-07', unidadeId: MANIFESTO, turno: 'dia', carros: 21, liquido: -842 },
+  { data: '2026-06-06', unidadeId: OPTUM, turno: 'dia', carros: 92, liquido: 1636.75 },
+  { data: '2026-06-06', unidadeId: MANIFESTO, turno: 'noite', carros: 30, liquido: 660 },
+  { data: '2026-06-05', unidadeId: OPTUM, turno: 'dia', carros: 164, liquido: 1413 },
+  { data: '2026-06-05', unidadeId: MANIFESTO, turno: 'dia', carros: 22, liquido: 356 },
+  { data: '2026-06-04', unidadeId: OPTUM, turno: 'dia', carros: 37, liquido: 711.5 },
+  { data: '2026-06-03', unidadeId: OPTUM, turno: 'dia', carros: 59, liquido: 1600 },
+  { data: '2026-06-02', unidadeId: MANIFESTO, turno: 'dia', carros: 39, liquido: -158 },
 ];
 
 /** Metas mensais de janeiro a maio (tabela "Carros por Mês"). */
-const METAS_MENSAIS: { mes: number; fichas: number; carros: number; liquido: number }[] = [
+interface MetaMensal { mes: number; fichas: number; carros: number; liquido: number }
+
+const METAS_MENSAIS: MetaMensal[] = [
   { mes: 1, fichas: 6, carros: 320, liquido: 4800 },
   { mes: 2, fichas: 5, carros: 280, liquido: 3920 },
   { mes: 3, fichas: 8, carros: 460, liquido: 7130 },
@@ -152,19 +160,35 @@ function distribuir(total: number, n: number, casas: 0 | 2): number[] {
   return partes;
 }
 
-function gerarMeses(): FichaSpec[] {
+/** 2025 completo (3.355 carros) — base do comparativo com o ano anterior. */
+const METAS_2025: MetaMensal[] = [
+  { mes: 1, fichas: 4, carros: 210, liquido: 3150 },
+  { mes: 2, fichas: 4, carros: 190, liquido: 2850 },
+  { mes: 3, fichas: 5, carros: 260, liquido: 3900 },
+  { mes: 4, fichas: 5, carros: 250, liquido: 3750 },
+  { mes: 5, fichas: 6, carros: 330, liquido: 4950 },
+  { mes: 6, fichas: 5, carros: 280, liquido: 4200 },
+  { mes: 7, fichas: 5, carros: 270, liquido: 4050 },
+  { mes: 8, fichas: 5, carros: 285, liquido: 4275 },
+  { mes: 9, fichas: 5, carros: 275, liquido: 4125 },
+  { mes: 10, fichas: 6, carros: 300, liquido: 4500 },
+  { mes: 11, fichas: 6, carros: 320, liquido: 4800 },
+  { mes: 12, fichas: 7, carros: 385, liquido: 5775 },
+];
+
+function gerarMeses(ano: number, metas: MetaMensal[]): FichaSpec[] {
   const specs: FichaSpec[] = [];
 
-  for (const meta of METAS_MENSAIS) {
+  for (const meta of metas) {
     const carros = distribuir(meta.carros, meta.fichas, 0);
     const liquidos = distribuir(meta.liquido, meta.fichas, 2);
-    const diasNoMes = new Date(2026, meta.mes, 0).getDate();
+    const diasNoMes = new Date(ano, meta.mes, 0).getDate();
 
     for (let i = 0; i < meta.fichas; i++) {
       const dia = Math.max(1, diasNoMes - i * 2);
       specs.push({
-        data: `2026-${String(meta.mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`,
-        unidade: 'Optum',
+        data: `${ano}-${String(meta.mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`,
+        unidadeId: OPTUM,
         turno: i % 4 === 3 ? 'noite' : 'dia',
         carros: carros[i],
         liquido: liquidos[i],
@@ -175,23 +199,21 @@ function gerarMeses(): FichaSpec[] {
   return specs;
 }
 
-export const FICHAS_SEED: Ficha[] = [...JUNHO, ...gerarMeses()]
+export const FICHAS_SEED: Ficha[] = [...JUNHO, ...gerarMeses(2026, METAS_MENSAIS), ...gerarMeses(2025, METAS_2025)]
   .map((spec, i) => montarFicha(i + 1, spec))
   .sort((a, b) => b.data.localeCompare(a.data) || b.id - a.id);
 
-/** Total de carros manobrados em 2025, usado no comparativo anual. */
-export const CARROS_ANO_ANTERIOR = 3355;
 
 /* -------------------------------------------------------------------------
    Despesas registradas
    ------------------------------------------------------------------------- */
 
 const DESPESAS_DESTAQUE: Omit<Despesa, 'id'>[] = [
-  { data: '2026-06-07', unidade: 'Manifesto', categoria: 'Seguro', descricao: 'Seguro veicular mensal', valor: 1000 },
-  { data: '2026-06-06', unidade: 'Optum', categoria: 'Seguro', descricao: 'Seguro do estabelecimento', valor: 1000 },
-  { data: '2026-06-06', unidade: 'Optum', categoria: 'Manutenção', descricao: 'Conserto casa de máquinas', valor: 920 },
-  { data: '2026-06-05', unidade: 'Optum', categoria: 'Aluguel', descricao: 'Aluguel do terreno', valor: 4000 },
-  { data: '2026-06-05', unidade: 'Optum', categoria: 'Outros', descricao: 'Honorários da contadora', valor: 280 },
+  { data: '2026-06-07', unidadeId: MANIFESTO, categoria: 'Seguro', descricao: 'Seguro veicular mensal', valor: 1000 },
+  { data: '2026-06-06', unidadeId: OPTUM, categoria: 'Seguro', descricao: 'Seguro do estabelecimento', valor: 1000 },
+  { data: '2026-06-06', unidadeId: OPTUM, categoria: 'Manutenção', descricao: 'Conserto casa de máquinas', valor: 920 },
+  { data: '2026-06-05', unidadeId: OPTUM, categoria: 'Aluguel', descricao: 'Aluguel do terreno', valor: 4000 },
+  { data: '2026-06-05', unidadeId: OPTUM, categoria: 'Outros', descricao: 'Honorários da contadora', valor: 280 },
 ];
 
 const MODELOS_DESPESA: { categoria: CategoriaDespesa; descricao: string; valor: number }[] = [
@@ -226,7 +248,7 @@ function gerarDespesas(): Despesa[] {
       lista.push({
         id: id++,
         data: `2026-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`,
-        unidade: i % 3 === 0 ? 'Manifesto' : 'Optum',
+        unidadeId: i % 3 === 0 ? MANIFESTO : OPTUM,
         categoria: modelo.categoria,
         descricao: modelo.descricao,
         valor: modelo.valor,

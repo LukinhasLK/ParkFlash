@@ -3,7 +3,8 @@ import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angu
 import { CATEGORIAS_DESPESA, CategoriaDespesa, Despesa } from '../../core/models';
 import { CLASSE_CATEGORIA, DespesasService, TODAS_CATEGORIAS } from '../../core/services/despesas.service';
 import { LayoutService } from '../../core/services/layout.service';
-import { ANO_ATUAL, ANOS_DISPONIVEIS, MES_ATUAL, MESES, TODAS_UNIDADES } from '../../core/services/periodo';
+import { FichasService } from '../../core/services/fichas.service';
+import { hojeIso, MESES, TODAS_UNIDADES } from '../../core/services/periodo';
 import { UnidadesService } from '../../core/services/unidades.service';
 import { ConfirmComponent } from '../../shared/components/confirm/confirm.component';
 import { IconComponent } from '../../shared/components/icon/icon.component';
@@ -26,26 +27,27 @@ import { DataBrPipe } from '../../shared/pipes/data-br.pipe';
 export class DespesasComponent {
   private readonly despesasService = inject(DespesasService);
   private readonly unidadesService = inject(UnidadesService);
+  private readonly fichasService = inject(FichasService);
   private readonly fb = inject(FormBuilder);
 
   protected readonly isMobile = inject(LayoutService).isMobile;
   protected readonly meses = MESES;
-  protected readonly anos = ANOS_DISPONIVEIS;
+  protected readonly anos = this.fichasService.anosDisponiveis;
   protected readonly categorias = CATEGORIAS_DESPESA;
   protected readonly todas = TODAS_UNIDADES;
   protected readonly todasCategorias = TODAS_CATEGORIAS;
-  protected readonly unidades = this.unidadesService.nomes;
+  protected readonly unidades = this.unidadesService.unidades;
 
-  protected readonly mes = signal(MES_ATUAL);
-  protected readonly ano = signal(ANO_ATUAL);
-  protected readonly unidade = signal(TODAS_UNIDADES);
+  protected readonly mes = signal(this.fichasService.periodoReferencia().mes);
+  protected readonly ano = signal(this.fichasService.periodoReferencia().ano);
+  protected readonly unidadeId = signal(TODAS_UNIDADES);
   protected readonly categoria = signal<string>(TODAS_CATEGORIAS);
 
   protected readonly despesas = computed(() =>
     this.despesasService.filtrar({
       mes: this.mes(),
       ano: this.ano(),
-      unidade: this.unidade(),
+      unidadeId: this.unidadeId(),
       categoria: this.categoria(),
     })
   );
@@ -53,29 +55,40 @@ export class DespesasComponent {
   protected readonly total = computed(() => this.despesasService.total(this.despesas()));
 
   protected readonly formAberto = signal(false);
+  protected readonly emEdicao = signal<Despesa | null>(null);
   protected readonly paraExcluir = signal<Despesa | null>(null);
   protected readonly detalhe = signal<Despesa | null>(null);
 
   protected readonly form = this.fb.nonNullable.group({
-    data: [new Date().toISOString().slice(0, 10), Validators.required],
-    unidade: ['', Validators.required],
+    data: [hojeIso(), Validators.required],
+    unidadeId: [null as number | null, Validators.required],
     categoria: ['Outros' as CategoriaDespesa, Validators.required],
     descricao: ['', Validators.required],
-    valor: [0, [Validators.required, Validators.min(0.01)]],
+    valor: [null as number | null, [Validators.required, Validators.min(0.01)]],
   });
 
   protected classe(categoria: CategoriaDespesa): string {
     return CLASSE_CATEGORIA[categoria];
   }
 
-  protected abrirForm(): void {
-    this.form.reset({
-      data: new Date().toISOString().slice(0, 10),
-      unidade: this.unidade() === TODAS_UNIDADES ? '' : this.unidade(),
-      categoria: 'Outros',
-      descricao: '',
-      valor: 0,
-    });
+  protected nomeUnidade(id: number): string {
+    return this.unidadesService.nome(id);
+  }
+
+  protected abrirForm(despesa?: Despesa): void {
+    this.emEdicao.set(despesa ?? null);
+    this.form.reset(
+      despesa
+        ? { data: despesa.data, unidadeId: despesa.unidadeId, categoria: despesa.categoria, descricao: despesa.descricao, valor: despesa.valor }
+        : {
+            data: hojeIso(),
+            unidadeId: this.unidadeId() === TODAS_UNIDADES ? null : this.unidadeId(),
+            categoria: 'Outros',
+            descricao: '',
+            valor: null,
+          }
+    );
+    this.detalhe.set(null);
     this.formAberto.set(true);
   }
 
@@ -85,7 +98,14 @@ export class DespesasComponent {
       return;
     }
 
-    this.despesasService.adicionar(this.form.getRawValue());
+    const v = this.form.getRawValue();
+    const dados = { ...v, unidadeId: v.unidadeId!, valor: Number(v.valor) };
+    const editada = this.emEdicao();
+    if (editada) {
+      this.despesasService.atualizar({ ...dados, id: editada.id });
+    } else {
+      this.despesasService.adicionar(dados);
+    }
     this.formAberto.set(false);
   }
 

@@ -8,3 +8,4 @@ export * from './periodo';
 export * from './socios.service';
 export * from './unidades.service';
 export * from './usuarios.service';
+export * from './permissoes';

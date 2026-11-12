@@ -25,7 +25,7 @@ export class SociosComponent {
 
   protected readonly isMobile = inject(LayoutService).isMobile;
   protected readonly socios = this.sociosService.socios;
-  protected readonly unidades = this.unidadesService.nomes;
+  protected readonly unidades = this.unidadesService.unidades;
   protected readonly totais = this.sociosService.totaisPorUnidade;
 
   protected readonly formAberto = signal(false);
@@ -51,10 +51,10 @@ export class SociosComponent {
     const editando = this.editando();
     const informados = this.valores().percentuais ?? [];
 
-    return this.unidades().map((unidade, i) => {
+    return this.unidades().map(({ id, nome: unidade }, i) => {
       const outros = this.socios()
         .filter((s) => s.id !== editando?.id)
-        .reduce((soma, s) => soma + (s.percentuais.find((p) => p.unidade === unidade)?.percentual ?? 0), 0);
+        .reduce((soma, s) => soma + (s.percentuais.find((p) => p.unidadeId === id)?.percentual ?? 0), 0);
 
       const meu = Number(informados[i]?.['percentual'] ?? 0);
       const total = outros + meu;
@@ -63,8 +63,12 @@ export class SociosComponent {
     });
   });
 
-  protected percentual(socio: Socio, unidade: string): number | null {
-    return this.sociosService.percentual(socio, unidade);
+  protected percentual(socio: Socio, unidadeId: number): number | null {
+    return this.sociosService.percentual(socio, unidadeId);
+  }
+
+  protected nomeUnidade(id: number): string {
+    return this.unidadesService.nome(id);
   }
 
   protected participacoes(socio: Socio) {
@@ -75,12 +79,13 @@ export class SociosComponent {
     this.editando.set(socio ?? null);
 
     this.percentuais.clear();
-    for (const unidade of this.unidades()) {
+    for (const { id, nome: unidade } of this.unidades()) {
       this.percentuais.push(
         this.fb.nonNullable.group({
+          unidadeId: [id],
           unidade: [unidade],
           percentual: [
-            socio?.percentuais.find((p) => p.unidade === unidade)?.percentual ?? 0,
+            socio?.percentuais.find((p) => p.unidadeId === id)?.percentual ?? 0,
             [Validators.min(0), Validators.max(100)],
           ],
         })
@@ -104,7 +109,7 @@ export class SociosComponent {
       id: this.editando()?.id,
       nome: bruto.nome,
       percentuais: bruto.percentuais.map((p) => ({
-        unidade: String(p['unidade']),
+        unidadeId: Number(p['unidadeId']),
         percentual: Number(p['percentual']),
       })),
     });

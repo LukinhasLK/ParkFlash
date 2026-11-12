@@ -1,5 +1,5 @@
 export interface PercentualUnidade {
-  unidade: string;
+  unidadeId: number;
   percentual: number;
 }
 

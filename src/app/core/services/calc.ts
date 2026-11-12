@@ -53,15 +53,20 @@ export interface ParteSocio {
 }
 
 /** Rateia um saldo entre os sócios que têm participação na unidade informada. */
-export function dividirEntreSocios(saldo: number, socios: Socio[], unidade: string): ParteSocio[] {
+export function dividirEntreSocios(saldo: number, socios: Socio[], unidadeId: number): ParteSocio[] {
   return socios
     .map((socio) => {
-      const participacao = socio.percentuais.find((p) => p.unidade === unidade);
+      const participacao = socio.percentuais.find((p) => p.unidadeId === unidadeId);
       return participacao
         ? { nome: socio.nome, percentual: participacao.percentual, valor: round2(saldo * (participacao.percentual / 100)) }
         : null;
     })
     .filter((parte): parte is ParteSocio => parte !== null);
+}
+
+/** Resultado do período: líquido das fichas menos as despesas fixas (aluguel, seguro...). */
+export function calcResultado(liquidoFichas: number, despesasFixas: number): number {
+  return round2((liquidoFichas || 0) - (despesasFixas || 0));
 }
 
 /** Despesas do dia na visão de relatório: tudo que separa o bruto do líquido. */

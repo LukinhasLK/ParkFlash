@@ -42,6 +42,15 @@ export class DespesasService {
     this.persistir();
   }
 
+  atualizar(despesa: Despesa): void {
+    this._despesas.update((lista) => lista.map((d) => (d.id === despesa.id ? despesa : d)));
+    this.persistir();
+  }
+
+  usaUnidade(unidadeId: number): boolean {
+    return this._despesas().some((d) => d.unidadeId === unidadeId);
+  }
+
   excluir(id: number): void {
     this._despesas.update((lista) => lista.filter((d) => d.id !== id));
     this.persistir();

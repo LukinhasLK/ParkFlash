@@ -3,6 +3,4 @@ export interface Manobrista {
   nome: string;
   telefone: string;
   cpf: string;
-  diasNoMes: number;
-  totalRecebido: number;
 }
