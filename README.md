@@ -9,10 +9,21 @@ com layout desktop (sidebar) e mobile (bottom navigation).
 npm install
 npm start          # http://localhost:4200
 npm run build      # build de produção
+npm test           # testes unitários (Karma + Jasmine)
 ```
 
-Na tela de login, qualquer senha com 4+ caracteres entra. O e-mail escolhe o usuário
-da sessão — use `lucasrodrigues.10@icloud.com` para entrar como Proprietário.
+### Login de demonstração
+
+Todos os usuários do seed usam a senha `123456` (troque em **Meu perfil**):
+
+| Usuário | Nível | Acesso |
+|---|---|---|
+| `lucasrodrigues.10@icloud.com` | Proprietário | tudo |
+| `pedro@email.com` | Gerente | tudo, menos Sócios, Usuários e Divisão de Lucro |
+| `dario@email.com` | Operador | Fichas (lançar), Manobristas e Meu perfil |
+
+As permissões ficam em `core/services/permissoes.ts`; o `roleGuard` bloqueia a rota e o
+menu (sidebar e bottom nav) só mostra o que o nível pode abrir.
 
 ## Stack
 
@@ -49,7 +60,12 @@ src/app/
 ## Dados
 
 Os dados são de demonstração e ficam em `core/services/seed.ts`, persistidos em
-`localStorage` conforme você edita (excluir a chave `parkflash.*` restaura o seed).
+`localStorage` conforme você edita, com chaves versionadas (`parkflash.v2.*`). Dados de
+versões antigas são descartados ao abrir o app; apagar as chaves `parkflash.v2.*` restaura o seed.
+
+Fichas, despesas e sócios guardam `unidadeId`/`manobristaId` (não o nome), então renomear
+uma unidade ou manobrista não quebra o histórico. Unidade ou manobrista com fichas/despesas
+lançadas não pode ser excluído.
 
 **Nenhum indicador é fixo em tela.** Todo KPI, gráfico e total é derivado das mesmas
 fichas, então filtrar uma tela recalcula tudo e as telas nunca se contradizem. As
@@ -89,8 +105,14 @@ totalCarros     = fichaFim − fichaInício − canceladas
 taxaDescontada  = valorCartão × (taxa / 100)
 líquidoCartão   = valorCartão − taxaDescontada
 saldoFinal      = dinheiro + líquidoCartão − totalDiárias − totalDespesas
-divisãoSócio    = saldoFinal × (percentual / 100)
+lucroFichas     = Σ saldoFinal das fichas do período
+resultado       = lucroFichas − despesas fixas (tela Despesas: aluguel, seguro...)
+divisãoSócio    = resultado da unidade × (percentual / 100)
 ```
+
+Dashboard, Relatórios e Divisão de Lucro mostram as três linhas (lucro das fichas,
+despesas fixas e resultado). Os testes de `calc.ts`, `periodo.ts`, permissões, máscaras,
+`FichasService` e `AuthService` ficam nos `*.spec.ts` ao lado de cada arquivo.
 
 ## Detalhes de implementação
 
@@ -102,4 +124,10 @@ divisãoSócio    = saldoFinal × (percentual / 100)
   fechamento antes de salvar; unidade sem sócios aparece como "sem rateio", não como erro.
 - **Manobristas**: dias trabalhados e total recebido vêm das fichas do mês, não do cadastro.
 - O usuário logado não consegue excluir a própria conta.
+- **Editar**: fichas (`/app/fichas/:id/editar`, Gerente/Proprietário) e despesas.
+- **Validações da ficha**: bloqueia ficha duplicada (mesma data, unidade e turno) e
+  manobrista repetido; ao enviar com erro, a tela rola até o primeiro campo inválido.
+- **Datas** usam o fuso local (`hojeIso()`), não UTC.
+- **CPF e telefone** têm máscara (`pfMascara`) e validação de dígitos.
+- O sino do Dashboard lista alertas reais (rateio ≠ 100%, fichas ou mês no prejuízo).
 # ParkFlash

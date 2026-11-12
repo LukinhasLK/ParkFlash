@@ -56,7 +56,15 @@
 
       <button type="submit" class="pf-btn pf-btn--primary pf-btn--block">Entrar</button>
 
-      <button type="button" class="pf-link-btn card__esqueci">Esqueci minha senha</button>
+      <button type="button" class="pf-link-btn card__esqueci" (click)="ajudaSenha.set(!ajudaSenha())" [attr.aria-expanded]="ajudaSenha()">
+        Esqueci minha senha
+      </button>
+      @if (ajudaSenha()) {
+        <p class="card__ajuda">
+          Peça ao proprietário para definir uma nova senha em <strong>Usuários</strong>.
+          Na demonstração, todos os usuários usam a senha <strong>{{ senhaDemo }}</strong>.
+        </p>
+      }
     </form>
   </section>
 </div>

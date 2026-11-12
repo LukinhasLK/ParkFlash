@@ -2,16 +2,14 @@
   <pf-page-header title="Carros por Mês" subtitle="Total de carros manobrados por período" />
 
   <div class="pf-filters">
-    <select class="pf-select" [ngModel]="anoEdicao()" (ngModelChange)="anoEdicao.set(+$event)" aria-label="Ano">
-      @for (a of anos; track a) { <option [value]="a">{{ a }}</option> }
+    <select class="pf-select" [ngModel]="ano()" (ngModelChange)="ano.set(+$event)" aria-label="Ano">
+      @for (a of anos(); track a) { <option [value]="a">{{ a }}</option> }
     </select>
 
-    <select class="pf-select" [ngModel]="unidadeEdicao()" (ngModelChange)="unidadeEdicao.set($event)" aria-label="Unidade">
-      <option [value]="todas">Todas</option>
-      @for (nome of unidades(); track nome) { <option [value]="nome">{{ nome }}</option> }
+    <select class="pf-select" [ngModel]="unidadeId()" (ngModelChange)="unidadeId.set($event)" aria-label="Unidade">
+      <option [ngValue]="todas">Todas</option>
+      @for (u of unidades(); track u.id) { <option [ngValue]="u.id">{{ u.nome }}</option> }
     </select>
-
-    <button type="button" class="pf-btn pf-btn--dark" (click)="buscar()">Buscar</button>
   </div>
 
   <section class="pf-grid-kpi">
@@ -29,7 +27,7 @@
       <pf-kpi-card
         label="Comparativo ano ant."
         [value]="(c.variacao >= 0 ? '↑ ' : '↓ ') + (c.variacao >= 0 ? c.variacao : -c.variacao) + '%'"
-        [hint]="'base: ' + (c.base | numeroBr) + ' carros'"
+        [hint]="'mesmos ' + c.meses + ' meses: ' + (c.base | numeroBr) + ' carros'"
         [tone]="c.variacao >= 0 ? 'success' : 'danger'"
       />
     } @else {

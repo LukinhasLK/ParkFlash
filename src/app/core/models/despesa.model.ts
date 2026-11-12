@@ -5,7 +5,7 @@ export const CATEGORIAS_DESPESA: CategoriaDespesa[] = ['Seguro', 'Manutenção',
 export interface Despesa {
   id: number;
   data: string;
-  unidade: string;
+  unidadeId: number;
   categoria: CategoriaDespesa;
   descricao: string;
   valor: number;

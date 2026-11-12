@@ -1,7 +1,10 @@
 <form class="pf-page nova" [formGroup]="form" (ngSubmit)="lancar()" novalidate>
 
   @if (!isMobile()) {
-    <pf-page-header title="Nova ficha" subtitle="Lance o fechamento do dia" />
+    <pf-page-header
+      [title]="emEdicao() ? 'Editar ficha' : 'Nova ficha'"
+      [subtitle]="emEdicao() ? 'Corrija os dados do fechamento' : 'Lance o fechamento do dia'"
+    />
   } @else {
     <!-- Stepper mobile -->
     <div class="stepper">
@@ -27,13 +30,13 @@
           <div class="grid grid--3">
             <div class="pf-field">
               <label class="pf-label" for="unidade">Unidade</label>
-              <select id="unidade" class="pf-select" formControlName="unidade">
-                <option value="" disabled>Selecione a unidade</option>
+              <select id="unidade" class="pf-select" formControlName="unidadeId">
+                <option [ngValue]="null" disabled>Selecione a unidade</option>
                 @for (u of unidades(); track u.id) {
-                  <option [value]="u.nome">{{ u.nome }}</option>
+                  <option [ngValue]="u.id">{{ u.nome }}</option>
                 }
               </select>
-              @if (invalido('unidade')) { <span class="pf-error">Escolha a unidade.</span> }
+              @if (invalido('unidadeId')) { <span class="pf-error">Escolha a unidade.</span> }
             </div>
 
             <div class="pf-field">
@@ -56,6 +59,10 @@
               </div>
             </div>
           </div>
+
+          @if (erroDuplicada()) {
+            <p class="pf-error secao__aviso">Já existe uma ficha desta unidade para esta data e turno.</p>
+          }
         </section>
       }
 
@@ -67,17 +74,19 @@
           <div class="grid grid--4">
             <div class="pf-field">
               <label class="pf-label" for="fichaInicio">Ficha início</label>
-              <input id="fichaInicio" class="pf-input" type="number" min="0" inputmode="numeric" formControlName="fichaInicio" />
+              <input id="fichaInicio" class="pf-input" type="number" min="0" inputmode="numeric" placeholder="0" formControlName="fichaInicio" />
+              @if (invalido('fichaInicio')) { <span class="pf-error">Informe a ficha inicial.</span> }
             </div>
 
             <div class="pf-field">
               <label class="pf-label" for="fichaFim">Ficha fim</label>
-              <input id="fichaFim" class="pf-input" type="number" min="0" inputmode="numeric" formControlName="fichaFim" />
+              <input id="fichaFim" class="pf-input" type="number" min="0" inputmode="numeric" placeholder="0" formControlName="fichaFim" />
+              @if (invalido('fichaFim')) { <span class="pf-error">Informe a ficha final.</span> }
             </div>
 
             <div class="pf-field">
               <label class="pf-label" for="canceladas">Fichas canceladas</label>
-              <input id="canceladas" class="pf-input" type="number" min="0" inputmode="numeric" formControlName="fichasCanceladas" />
+              <input id="canceladas" class="pf-input" type="number" min="0" inputmode="numeric" placeholder="0" formControlName="fichasCanceladas" />
             </div>
 
             <div class="pf-field">
@@ -101,12 +110,13 @@
             <div class="linha" [formGroupName]="i">
               <div class="pf-field linha__principal">
                 @if (i === 0) { <span class="pf-label">Manobrista</span> }
-                <select class="pf-select" formControlName="nome" aria-label="Manobrista">
-                  <option value="" disabled>Selecione</option>
-                  @for (m of manobristasDisponiveis(); track m.id) {
-                    <option [value]="m.nome">{{ m.nome }}</option>
+                <select class="pf-select" formControlName="manobristaId" aria-label="Manobrista">
+                  <option [ngValue]="null" disabled>Selecione</option>
+                  @for (m of opcoesManobrista(i); track m.id) {
+                    <option [ngValue]="m.id">{{ m.nome }}</option>
                   }
                 </select>
+                @if (invalido('manobristas.' + i + '.manobristaId')) { <span class="pf-error">Escolha o manobrista.</span> }
               </div>
 
               <div class="pf-field linha__valor">
@@ -127,6 +137,10 @@
             </div>
           }
 
+          @if (manobristas.errors?.['manobristaRepetido']) {
+            <p class="pf-error secao__aviso">O mesmo manobrista foi escolhido mais de uma vez.</p>
+          }
+
           <div class="secao__links">
             <button type="button" class="pf-link-btn" (click)="adicionarManobrista()">+ Adicionar Manobrista</button>
             <button type="button" class="pf-link-btn" (click)="novoManobristaAberto.set(true)">+ Novo Manobrista</button>
@@ -144,12 +158,12 @@
           <div class="grid grid--3">
             <div class="pf-field">
               <label class="pf-label" for="dinheiro">Valor em Dinheiro (R$)</label>
-              <input id="dinheiro" class="pf-input" type="number" min="0" step="0.01" inputmode="decimal" formControlName="valorDinheiro" />
+              <input id="dinheiro" class="pf-input" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0,00" formControlName="valorDinheiro" />
             </div>
 
             <div class="pf-field">
               <label class="pf-label" for="cartao">Valor em Cartão (R$)</label>
-              <input id="cartao" class="pf-input" type="number" min="0" step="0.01" inputmode="decimal" formControlName="valorCartao" />
+              <input id="cartao" class="pf-input" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0,00" formControlName="valorCartao" />
             </div>
 
             <div class="pf-field">
@@ -186,7 +200,7 @@
 
               <div class="pf-field linha__valor">
                 @if (i === 0) { <span class="pf-label">Valor (R$)</span> }
-                <input class="pf-input" type="number" min="0" step="0.01" inputmode="decimal" formControlName="valor" aria-label="Valor" />
+                <input class="pf-input" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0,00" formControlName="valor" aria-label="Valor" />
               </div>
 
               <button
@@ -232,7 +246,7 @@
           <h2 class="resumo__titulo">Resumo Final</h2>
 
           <dl class="resumo__lista">
-            <div><dt>Total Dinheiro</dt><dd>{{ form.controls.valorDinheiro.value | currencyBr }}</dd></div>
+            <div><dt>Total Dinheiro</dt><dd>{{ form.controls.valorDinheiro.value ?? 0 | currencyBr }}</dd></div>
             <div><dt>Total Cartão líquido</dt><dd>{{ liquidoCartao() | currencyBr }}</dd></div>
             <div class="neg"><dt>(−) Total Diárias</dt><dd>− {{ totalDiarias() | currencyBr }}</dd></div>
             <div class="neg"><dt>(−) Total Despesas</dt><dd>− {{ totalDespesas() | currencyBr }}</dd></div>
@@ -248,7 +262,8 @@
           </div>
 
           @if (divisao().length) {
-            <p class="resumo__subtitulo">Divisão entre Sócios</p>
+            <p class="resumo__subtitulo">Participação no saldo desta ficha</p>
+            <p class="resumo__aviso">Prévia sem despesas fixas; o rateio do mês fica em Divisão de Lucro.</p>
             <ul class="resumo__socios">
               @for (parte of divisao(); track parte.nome) {
                 <li>
@@ -257,15 +272,17 @@
                 </li>
               }
             </ul>
-          } @else if (form.controls.unidade.value) {
+          } @else if (form.controls.unidadeId.value) {
             <p class="resumo__aviso">Esta unidade ainda não tem sócios cadastrados.</p>
           } @else {
-            <p class="resumo__aviso">Selecione a unidade para ver a divisão entre sócios.</p>
+            <p class="resumo__aviso">Selecione a unidade para ver a participação dos sócios.</p>
           }
 
           @if (!isMobile()) {
-            <button type="submit" class="pf-btn pf-btn--primary pf-btn--block resumo__acao">Lançar Ficha</button>
-            @if (enviado() && !podeLancar()) {
+            <button type="submit" class="pf-btn pf-btn--primary pf-btn--block resumo__acao">
+              {{ emEdicao() ? 'Salvar alterações' : 'Lançar Ficha' }}
+            </button>
+            @if (enviado() && (!podeLancar() || erroDuplicada())) {
               <p class="pf-error resumo__erro">Revise os campos destacados antes de lançar.</p>
             }
           }
@@ -291,7 +308,7 @@
         </button>
       } @else {
         <button type="submit" class="pf-btn pf-btn--primary nav-etapas__principal">
-          Lançar ficha
+          {{ emEdicao() ? 'Salvar' : 'Lançar ficha' }}
           <pf-icon name="check" [size]="16" />
         </button>
       }
@@ -310,12 +327,18 @@
 
       <div class="pf-field">
         <label class="pf-label" for="nm-telefone">Telefone</label>
-        <input id="nm-telefone" class="pf-input" type="tel" placeholder="(11) 90000-0000" formControlName="telefone" />
+        <input id="nm-telefone" class="pf-input" type="tel" pfMascara="telefone" placeholder="(11) 90000-0000" formControlName="telefone" />
+        @if (novoManobristaForm.controls.telefone.invalid && novoManobristaForm.controls.telefone.touched) {
+          <span class="pf-error">Telefone com DDD (10 ou 11 dígitos).</span>
+        }
       </div>
 
       <div class="pf-field">
         <label class="pf-label" for="nm-cpf">CPF</label>
-        <input id="nm-cpf" class="pf-input" type="text" placeholder="000.000.000-00" formControlName="cpf" />
+        <input id="nm-cpf" class="pf-input" type="text" inputmode="numeric" pfMascara="cpf" placeholder="000.000.000-00" formControlName="cpf" />
+        @if (novoManobristaForm.controls.cpf.invalid && novoManobristaForm.controls.cpf.touched) {
+          <span class="pf-error">CPF inválido.</span>
+        }
       </div>
 
       <div class="modal-form__acoes">

@@ -7,4 +7,6 @@ export interface Usuario {
   nome: string;
   email: string;
   nivel: NivelAcesso;
+  /** Só existe no modo demonstração (localStorage); no back end fica com hash BCrypt. */
+  senha?: string;
 }

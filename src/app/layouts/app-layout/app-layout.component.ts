@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { RouterLink, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { LayoutService } from '../../core/services/layout.service';
 import { corDoAvatar } from '../../shared/nav-items';
@@ -10,7 +10,7 @@ import { SidebarComponent } from '../../shared/components/sidebar/sidebar.compon
 @Component({
   selector: 'pf-app-layout',
   standalone: true,
-  imports: [RouterOutlet, SidebarComponent, BottomNavComponent, LogoComponent],
+  imports: [RouterLink, RouterOutlet, SidebarComponent, BottomNavComponent, LogoComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './app-layout.component.html',
   styleUrl: './app-layout.component.scss',

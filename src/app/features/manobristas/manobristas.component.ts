@@ -1,10 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Manobrista } from '../../core/models';
 import { FichasService } from '../../core/services/fichas.service';
 import { LayoutService } from '../../core/services/layout.service';
 import { ManobristasService } from '../../core/services/manobristas.service';
-import { ANO_ATUAL, MES_ATUAL, rotuloPeriodo } from '../../core/services/periodo';
+import { AuthService } from '../../core/services/auth.service';
+import { MESES, rotuloPeriodo } from '../../core/services/periodo';
+import { podeAcessar } from '../../core/services/permissoes';
+import { cpfValido, MascaraDirective, telefoneValido } from '../../shared/directives/mascara.directive';
 import { corDoAvatar } from '../../shared/nav-items';
 import { ConfirmComponent } from '../../shared/components/confirm/confirm.component';
 import { IconComponent } from '../../shared/components/icon/icon.component';
@@ -13,6 +16,8 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
 import { CurrencyBrPipe } from '../../shared/pipes/currency-br.pipe';
 
 interface LinhaManobrista extends Manobrista {
+  diasNoMes: number;
+  totalRecebido: number;
   inicial: string;
   cor: string;
 }
@@ -20,7 +25,7 @@ interface LinhaManobrista extends Manobrista {
 @Component({
   selector: 'pf-manobristas',
   standalone: true,
-  imports: [ReactiveFormsModule, PageHeaderComponent, IconComponent, ModalComponent, ConfirmComponent, CurrencyBrPipe],
+  imports: [FormsModule, ReactiveFormsModule, MascaraDirective, PageHeaderComponent, IconComponent, ModalComponent, ConfirmComponent, CurrencyBrPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './manobristas.component.html',
   styleUrl: './manobristas.component.scss',
@@ -29,23 +34,27 @@ export class ManobristasComponent {
   private readonly manobristasService = inject(ManobristasService);
   private readonly fichasService = inject(FichasService);
   private readonly fb = inject(FormBuilder);
+  private readonly auth = inject(AuthService);
 
   protected readonly isMobile = inject(LayoutService).isMobile;
-  protected readonly periodo = rotuloPeriodo(MES_ATUAL, ANO_ATUAL);
+  protected readonly meses = MESES;
+  protected readonly anos = this.fichasService.anosDisponiveis;
+  protected readonly mes = signal(this.fichasService.periodoReferencia().mes);
+  protected readonly ano = signal(this.fichasService.periodoReferencia().ano);
+  protected readonly periodo = computed(() => rotuloPeriodo(this.mes(), this.ano()));
+  protected readonly podeExcluir = computed(() => podeAcessar(this.auth.nivel(), 'unidades'));
+  protected readonly bloqueado = signal<Manobrista | null>(null);
 
-  /**
-   * Dias e valores vêm das fichas do mês; o cadastro só guarda os dados
-   * pessoais. Quem ainda não apareceu em nenhuma ficha cai no valor do cadastro.
-   */
+  /** Dias e diárias vêm das fichas do período escolhido; o cadastro só guarda dados pessoais. */
   protected readonly linhas = computed<LinhaManobrista[]>(() => {
-    const lancamentos = this.fichasService.diariasPorManobrista(MES_ATUAL, ANO_ATUAL);
+    const lancamentos = this.fichasService.diariasPorManobrista(this.mes(), this.ano());
 
     return this.manobristasService.manobristas().map((m) => {
-      const doMes = lancamentos.get(m.nome);
+      const doMes = lancamentos.get(m.id);
       return {
         ...m,
-        diasNoMes: doMes?.dias ?? m.diasNoMes,
-        totalRecebido: doMes?.total ?? m.totalRecebido,
+        diasNoMes: doMes?.dias ?? 0,
+        totalRecebido: doMes?.total ?? 0,
         inicial: m.nome.charAt(0).toUpperCase(),
         cor: corDoAvatar(m.nome),
       };
@@ -58,8 +67,8 @@ export class ManobristasComponent {
 
   protected readonly form = this.fb.nonNullable.group({
     nome: ['', Validators.required],
-    telefone: [''],
-    cpf: [''],
+    telefone: ['', telefoneValido],
+    cpf: ['', cpfValido],
   });
 
   protected abrir(manobrista?: Manobrista): void {
@@ -83,11 +92,18 @@ export class ManobristasComponent {
     this.manobristasService.salvarManobrista({
       ...this.form.getRawValue(),
       id: atual?.id,
-      diasNoMes: atual?.diasNoMes ?? 0,
-      totalRecebido: atual?.totalRecebido ?? 0,
     });
 
     this.formAberto.set(false);
+  }
+
+  /** Quem já aparece em fichas não pode sair do cadastro (o histórico perderia o nome). */
+  protected pedirExclusao(manobrista: Manobrista): void {
+    if (this.fichasService.usaManobrista(manobrista.id)) {
+      this.bloqueado.set(manobrista);
+    } else {
+      this.paraExcluir.set(manobrista);
+    }
   }
 
   protected confirmarExclusao(): void {

@@ -4,7 +4,7 @@
       <div class="mais__handle" aria-hidden="true"></div>
       <p class="mais__title">Mais opções</p>
       <div class="mais__grid">
-        @for (item of maisItens; track item.rota) {
+        @for (item of maisItens(); track item.rota) {
           <a class="mais__item" [routerLink]="item.rota" (click)="fecharMais()">
             <pf-icon [name]="item.icone" [size]="20" />
             <span>{{ item.label }}</span>
@@ -20,7 +20,7 @@
 }
 
 <nav class="bottom-nav" aria-label="Navegação">
-  @for (item of itens; track item.rota) {
+  @for (item of itens(); track item.rota) {
     <a
       class="bn-item"
       [routerLink]="item.rota"

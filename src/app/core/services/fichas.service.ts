@@ -1,8 +1,9 @@
-import { Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { Ficha } from '../models';
 import { despesasDaFicha, round2 } from './calc';
-import { anoDe, diaDaSemana, DIAS_SEMANA, diaDe, Filtro, formatarData, mesDe, noPeriodo } from './periodo';
-import { CARROS_ANO_ANTERIOR, FICHAS_SEED } from './seed';
+import { DespesasService } from './despesas.service';
+import { anoDe, diaDaSemana, DIAS_SEMANA, diaDe, Filtro, formatarData, hojeIso, mesDe, noPeriodo, Periodo } from './periodo';
+import { FICHAS_SEED } from './seed';
 import { carregar, salvar } from './storage';
 
 const CHAVE = 'parkflash.fichas';
@@ -30,17 +31,38 @@ export interface ResumoMes {
 
 @Injectable({ providedIn: 'root' })
 export class FichasService {
+  private readonly despesasService = inject(DespesasService);
   private readonly _fichas = signal<Ficha[]>(carregar(CHAVE, FICHAS_SEED));
 
   readonly fichas = this._fichas.asReadonly();
-  readonly carrosAnoAnterior = CARROS_ANO_ANTERIOR;
+
+  /** Mês aberto por padrão nas telas: o da ficha mais recente (até hoje) ou o mês atual. */
+  readonly periodoReferencia = computed<Periodo>(() => {
+    const hoje = hojeIso();
+    const maisRecente = this._fichas()
+      .map((f) => f.data)
+      .filter((data) => data <= hoje)
+      .sort()
+      .at(-1) ?? hoje;
+    return { mes: mesDe(maisRecente), ano: anoDe(maisRecente) };
+  });
+
+  /** Anos com fichas ou despesas fixas mais o ano atual, do mais recente ao mais antigo. */
+  readonly anosDisponiveis = computed(() => {
+    const anos = new Set([
+      anoDe(hojeIso()),
+      ...this._fichas().map((f) => anoDe(f.data)),
+      ...this.despesasService.despesas().map((d) => anoDe(d.data)),
+    ]);
+    return [...anos].sort((a, b) => b - a);
+  });
 
   porId(id: number): Ficha | undefined {
     return this._fichas().find((f) => f.id === id);
   }
 
   /** Fichas do período, já ordenadas da mais recente para a mais antiga. */
-  filtrar(filtro: Filtro): Ficha[] {
+  filtrar(filtro: Filtro, nomeUnidade: (id: number) => string = () => ''): Ficha[] {
     const busca = filtro.busca?.trim().toLowerCase() ?? '';
 
     return this._fichas()
@@ -48,7 +70,7 @@ export class FichasService {
       .filter((ficha) => {
         if (!busca) return true;
         return (
-          ficha.unidade.toLowerCase().includes(busca) ||
+          nomeUnidade(ficha.unidadeId).toLowerCase().includes(busca) ||
           formatarData(ficha.data).includes(busca) ||
           ficha.data.includes(busca)
         );
@@ -85,10 +107,10 @@ export class FichasService {
   }
 
   /** Resumo de cada mês de um ano — base dos gráficos de evolução. */
-  resumoMensal(ano: number, unidade: string): ResumoMes[] {
+  resumoMensal(ano: number, unidadeId: number): ResumoMes[] {
     return Array.from({ length: 12 }, (_, i) => {
       const mes = i + 1;
-      const doMes = this.filtrar({ mes, ano, unidade });
+      const doMes = this.filtrar({ mes, ano, unidadeId });
       const resumo = this.resumir(doMes);
       return { mes, fichas: resumo.fichas, carros: resumo.carros, bruto: resumo.bruto, liquido: resumo.liquido };
     });
@@ -108,9 +130,19 @@ export class FichasService {
     return { dia: DIAS_SEMANA[melhor], total: totais[melhor] };
   }
 
-  anosComRegistro(): number[] {
-    const anos = new Set(this._fichas().map((f) => anoDe(f.data)));
-    return [...anos].sort((a, b) => b - a);
+  /** Já existe ficha para a mesma data, unidade e turno? */
+  existeDuplicada(ficha: Pick<Ficha, 'data' | 'unidadeId' | 'turno'>, ignorarId?: number): boolean {
+    return this._fichas().some(
+      (f) => f.id !== ignorarId && f.data === ficha.data && f.unidadeId === ficha.unidadeId && f.turno === ficha.turno
+    );
+  }
+
+  usaUnidade(unidadeId: number): boolean {
+    return this._fichas().some((f) => f.unidadeId === unidadeId);
+  }
+
+  usaManobrista(manobristaId: number): boolean {
+    return this._fichas().some((f) => f.manobristas.some((m) => m.manobristaId === manobristaId));
   }
 
   adicionar(ficha: Omit<Ficha, 'id'>): Ficha {
@@ -120,21 +152,28 @@ export class FichasService {
     return nova;
   }
 
+  atualizar(ficha: Ficha): void {
+    this._fichas.update((lista) =>
+      lista.map((f) => (f.id === ficha.id ? ficha : f)).sort((a, b) => b.data.localeCompare(a.data) || b.id - a.id)
+    );
+    this.persistir();
+  }
+
   excluir(id: number): void {
     this._fichas.update((lista) => lista.filter((f) => f.id !== id));
     this.persistir();
   }
 
   /** Quantos dias cada manobrista trabalhou no mês/ano e quanto recebeu. */
-  diariasPorManobrista(mes: number, ano: number): Map<string, { dias: number; total: number }> {
-    const mapa = new Map<string, { dias: number; total: number }>();
+  diariasPorManobrista(mes: number, ano: number): Map<number, { dias: number; total: number }> {
+    const mapa = new Map<number, { dias: number; total: number }>();
 
     for (const ficha of this._fichas()) {
       if (anoDe(ficha.data) !== ano || (mes !== 0 && mesDe(ficha.data) !== mes)) continue;
 
       for (const m of ficha.manobristas) {
-        const atual = mapa.get(m.nome) ?? { dias: 0, total: 0 };
-        mapa.set(m.nome, { dias: atual.dias + 1, total: round2(atual.total + m.diaria) });
+        const atual = mapa.get(m.manobristaId) ?? { dias: 0, total: 0 };
+        mapa.set(m.manobristaId, { dias: atual.dias + 1, total: round2(atual.total + m.diaria) });
       }
     }
 

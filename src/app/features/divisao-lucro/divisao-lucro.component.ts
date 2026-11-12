@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ChartConfiguration } from 'chart.js';
-import { dividirEntreSocios, round2 } from '../../core/services/calc';
+import { calcResultado, dividirEntreSocios, round2 } from '../../core/services/calc';
+import { DespesasService } from '../../core/services/despesas.service';
 import { FichasService } from '../../core/services/fichas.service';
 import { LayoutService } from '../../core/services/layout.service';
-import { ANO_ATUAL, ANOS_DISPONIVEIS, MES_ATUAL, MESES, rotuloPeriodo } from '../../core/services/periodo';
+import { MESES, rotuloPeriodo } from '../../core/services/periodo';
 import { SociosService } from '../../core/services/socios.service';
 import { UnidadesService } from '../../core/services/unidades.service';
 import { ChartComponent } from '../../shared/charts/chart.component';
@@ -35,31 +36,33 @@ export class DivisaoLucroComponent {
   private readonly fichasService = inject(FichasService);
   private readonly sociosService = inject(SociosService);
   private readonly unidadesService = inject(UnidadesService);
+  private readonly despesasService = inject(DespesasService);
 
   protected readonly isMobile = inject(LayoutService).isMobile;
   protected readonly meses = MESES;
-  protected readonly anos = ANOS_DISPONIVEIS;
-  protected readonly unidades = this.unidadesService.nomes;
+  protected readonly anos = this.fichasService.anosDisponiveis;
+  protected readonly unidades = this.unidadesService.unidades;
 
-  /** Filtros em edição — só viram consulta ao clicar em "Calcular". */
-  protected readonly mesEdicao = signal(MES_ATUAL);
-  protected readonly anoEdicao = signal(ANO_ATUAL);
-  protected readonly unidadeEdicao = signal(this.unidadePadrao());
+  protected readonly mes = signal(this.fichasService.periodoReferencia().mes);
+  protected readonly ano = signal(this.fichasService.periodoReferencia().ano);
+  protected readonly unidadeId = signal(this.unidadePadrao());
 
-  private readonly consulta = signal({
-    mes: MES_ATUAL,
-    ano: ANO_ATUAL,
-    unidade: this.unidadePadrao(),
-  });
+  private readonly consulta = computed(() => ({ mes: this.mes(), ano: this.ano(), unidadeId: this.unidadeId() }));
 
-  protected readonly periodoLabel = computed(() => rotuloPeriodo(this.consulta().mes, this.consulta().ano));
-  protected readonly unidadeLabel = computed(() => this.consulta().unidade);
+  protected readonly periodoLabel = computed(() => rotuloPeriodo(this.mes(), this.ano()));
+  protected readonly unidadeLabel = computed(() => this.unidadesService.nome(this.unidadeId()));
 
   private readonly fichas = computed(() => this.fichasService.filtrar(this.consulta()));
   protected readonly resumo = computed(() => this.fichasService.resumir(this.fichas()));
+  protected readonly despesasFixas = computed(() =>
+    this.despesasService.total(this.despesasService.filtrar(this.consulta()))
+  );
+
+  /** O que sobra para os sócios: lucro das fichas menos as despesas fixas da unidade. */
+  protected readonly resultado = computed(() => calcResultado(this.resumo().liquido, this.despesasFixas()));
 
   protected readonly partes = computed(() =>
-    dividirEntreSocios(this.resumo().liquido, this.sociosService.socios(), this.consulta().unidade)
+    dividirEntreSocios(this.resultado(), this.sociosService.socios(), this.unidadeId())
   );
 
   /**
@@ -93,7 +96,7 @@ export class DivisaoLucroComponent {
   );
 
   /** O donut representa proporção — com saldo negativo ele não faz sentido. */
-  protected readonly saldoNegativo = computed(() => this.resumo().liquido < 0);
+  protected readonly saldoNegativo = computed(() => this.resultado() < 0);
 
   protected readonly grafico = computed<ChartConfiguration>(() => {
     const fatias = this.fatias();
@@ -146,21 +149,13 @@ export class DivisaoLucroComponent {
         : NEUTRO;
   }
 
-  protected calcular(): void {
-    this.consulta.set({
-      mes: this.mesEdicao(),
-      ano: this.anoEdicao(),
-      unidade: this.unidadeEdicao(),
-    });
-  }
-
   /** Largura da barra do detalhamento, proporcional ao maior percentual. */
   protected largura(percentual: number): number {
     const maior = Math.max(...this.partes().map((p) => p.percentual), 1);
     return Math.round((percentual / maior) * 100);
   }
 
-  private unidadePadrao(): string {
-    return this.sociosService.unidadesConfiguradas()[0]?.unidade ?? this.unidadesService.nomes()[0] ?? '';
+  private unidadePadrao(): number {
+    return this.sociosService.unidadesConfiguradas()[0]?.unidadeId ?? this.unidadesService.unidades()[0]?.id ?? 0;
   }
 }

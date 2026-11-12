@@ -11,13 +11,21 @@ export class UsuariosService {
 
   readonly usuarios = this._usuarios.asReadonly();
 
+  /** Na edição, senha vazia mantém a senha atual. */
   salvarUsuario(usuario: Omit<Usuario, 'id'> & { id?: number }): void {
+    const { senha, ...dados } = usuario;
+    const comSenha = senha ? { senha } : {};
     this._usuarios.update((lista) =>
       usuario.id
-        ? lista.map((u) => (u.id === usuario.id ? { ...u, ...usuario, id: u.id } : u))
-        : [...lista, { ...usuario, id: lista.reduce((maior, u) => Math.max(maior, u.id), 0) + 1 }]
+        ? lista.map((u) => (u.id === usuario.id ? { ...u, ...dados, ...comSenha, id: u.id } : u))
+        : [...lista, { ...dados, ...comSenha, id: lista.reduce((maior, u) => Math.max(maior, u.id), 0) + 1 }]
     );
     this.persistir();
+  }
+
+  emailEmUso(email: string, ignorarId?: number): boolean {
+    const busca = email.trim().toLowerCase();
+    return this._usuarios().some((u) => u.id !== ignorarId && u.email.toLowerCase() === busca);
   }
 
   excluir(id: number): void {

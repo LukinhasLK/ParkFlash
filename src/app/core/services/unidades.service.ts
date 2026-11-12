@@ -12,6 +12,11 @@ export class UnidadesService {
   readonly unidades = this._unidades.asReadonly();
   readonly nomes = computed(() => this._unidades().map((u) => u.nome));
 
+  /** Nome para exibição; registros antigos de uma unidade removida aparecem como "—". */
+  nome(id: number): string {
+    return this._unidades().find((u) => u.id === id)?.nome ?? '—';
+  }
+
   salvarUnidade(unidade: Omit<Unidade, 'id'> & { id?: number }): void {
     this._unidades.update((lista) =>
       unidade.id

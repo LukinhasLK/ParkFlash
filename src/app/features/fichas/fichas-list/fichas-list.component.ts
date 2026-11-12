@@ -10,7 +10,10 @@ import {
 } from '../../../core/services/calc';
 import { FichasService } from '../../../core/services/fichas.service';
 import { LayoutService } from '../../../core/services/layout.service';
-import { ANO_ATUAL, ANOS_DISPONIVEIS, MES_ATUAL, MESES, TODAS_UNIDADES } from '../../../core/services/periodo';
+import { AuthService } from '../../../core/services/auth.service';
+import { ManobristasService } from '../../../core/services/manobristas.service';
+import { MESES, TODAS_UNIDADES } from '../../../core/services/periodo';
+import { podeAcessar } from '../../../core/services/permissoes';
 import { UnidadesService } from '../../../core/services/unidades.service';
 import { ConfirmComponent } from '../../../shared/components/confirm/confirm.component';
 import { IconComponent } from '../../../shared/components/icon/icon.component';
@@ -35,26 +38,35 @@ import { NumeroBrPipe } from '../../../shared/pipes/numero-br.pipe';
 export class FichasListComponent {
   private readonly fichasService = inject(FichasService);
   private readonly unidadesService = inject(UnidadesService);
+  private readonly manobristasService = inject(ManobristasService);
+  private readonly auth = inject(AuthService);
 
   protected readonly isMobile = inject(LayoutService).isMobile;
   protected readonly meses = MESES;
-  protected readonly anos = ANOS_DISPONIVEIS;
+  protected readonly anos = this.fichasService.anosDisponiveis;
   protected readonly todas = TODAS_UNIDADES;
-  protected readonly unidades = this.unidadesService.nomes;
+  protected readonly unidades = this.unidadesService.unidades;
+  protected readonly podeEditar = computed(() => podeAcessar(this.auth.nivel(), 'fichas/:id/editar'));
 
   protected readonly busca = signal('');
-  protected readonly mes = signal(MES_ATUAL);
-  protected readonly ano = signal(ANO_ATUAL);
-  protected readonly unidade = signal(TODAS_UNIDADES);
+  protected readonly mes = signal(this.fichasService.periodoReferencia().mes);
+  protected readonly ano = signal(this.fichasService.periodoReferencia().ano);
+  protected readonly unidadeId = signal(TODAS_UNIDADES);
 
   protected readonly fichas = computed(() =>
-    this.fichasService.filtrar({
-      mes: this.mes(),
-      ano: this.ano(),
-      unidade: this.unidade(),
-      busca: this.busca(),
-    })
+    this.fichasService.filtrar(
+      { mes: this.mes(), ano: this.ano(), unidadeId: this.unidadeId(), busca: this.busca() },
+      (id) => this.unidadesService.nome(id)
+    )
   );
+
+  protected nomeUnidade(id: number): string {
+    return this.unidadesService.nome(id);
+  }
+
+  protected nomeManobrista(id: number): string {
+    return this.manobristasService.nome(id);
+  }
 
   protected readonly resumo = computed(() => this.fichasService.resumir(this.fichas()));
 
@@ -82,8 +94,8 @@ export class FichasListComponent {
 
   protected limparFiltros(): void {
     this.busca.set('');
-    this.mes.set(MES_ATUAL);
-    this.ano.set(ANO_ATUAL);
-    this.unidade.set(TODAS_UNIDADES);
+    this.mes.set(this.fichasService.periodoReferencia().mes);
+    this.ano.set(this.fichasService.periodoReferencia().ano);
+    this.unidadeId.set(TODAS_UNIDADES);
   }
 }

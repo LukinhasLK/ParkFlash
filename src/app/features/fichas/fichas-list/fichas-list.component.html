@@ -28,15 +28,15 @@
     </select>
 
     <select class="pf-select" [ngModel]="ano()" (ngModelChange)="ano.set(+$event)" aria-label="Ano">
-      @for (a of anos; track a) {
+      @for (a of anos(); track a) {
         <option [value]="a">{{ a }}</option>
       }
     </select>
 
-    <select class="pf-select" [ngModel]="unidade()" (ngModelChange)="unidade.set($event)" aria-label="Unidade">
-      <option [value]="todas">Todas as unidades</option>
-      @for (nome of unidades(); track nome) {
-        <option [value]="nome">{{ nome }}</option>
+    <select class="pf-select" [ngModel]="unidadeId()" (ngModelChange)="unidadeId.set($event)" aria-label="Unidade">
+      <option [ngValue]="todas">Todas as unidades</option>
+      @for (u of unidades(); track u.id) {
+        <option [ngValue]="u.id">{{ u.nome }}</option>
       }
     </select>
   </div>
@@ -66,7 +66,7 @@
         <article class="pf-card card-ficha" (click)="detalhe.set(ficha)">
           <div class="card-ficha__info">
             <p class="card-ficha__data">{{ ficha.data | dataBr }}</p>
-            <p class="card-ficha__meta">{{ ficha.unidade }} · {{ ficha.totalCarros | numeroBr }} carros</p>
+            <p class="card-ficha__meta">{{ nomeUnidade(ficha.unidadeId) }} · {{ ficha.totalCarros | numeroBr }} carros</p>
           </div>
           <p class="card-ficha__valor" [class.pf-money--neg]="ficha.totalLiquido < 0" [class.pf-money--pos]="ficha.totalLiquido >= 0">
             {{ ficha.totalLiquido | currencyBr }}
@@ -92,7 +92,7 @@
             @for (ficha of fichas(); track ficha.id) {
               <tr>
                 <td>{{ ficha.data | dataBr }}</td>
-                <td>{{ ficha.unidade }}</td>
+                <td>{{ nomeUnidade(ficha.unidadeId) }}</td>
                 <td class="num">{{ ficha.totalCarros | numeroBr }}</td>
                 <td class="num">{{ ficha.totalBruto | currencyBr }}</td>
                 <td class="num" [class.pf-money--neg]="ficha.totalLiquido < 0" [class.pf-money--pos]="ficha.totalLiquido >= 0">
@@ -100,7 +100,10 @@
                 </td>
                 <td class="actions">
                   <button type="button" class="acao" (click)="detalhe.set(ficha)">Ver</button>
-                  <button type="button" class="acao acao--danger" (click)="paraExcluir.set(ficha)">Excluir</button>
+                  @if (podeEditar()) {
+                    <a class="acao" [routerLink]="['/app/fichas', ficha.id, 'editar']">Editar</a>
+                    <button type="button" class="acao acao--danger" (click)="paraExcluir.set(ficha)">Excluir</button>
+                  }
                 </td>
               </tr>
             }
@@ -115,7 +118,7 @@
 @if (detalhe(); as ficha) {
   <pf-modal [title]="'Ficha de ' + (ficha.data | dataBr)" (fechar)="detalhe.set(null)">
     <dl class="det">
-      <div class="det__linha"><dt>Unidade</dt><dd>{{ ficha.unidade }}</dd></div>
+      <div class="det__linha"><dt>Unidade</dt><dd>{{ nomeUnidade(ficha.unidadeId) }}</dd></div>
       <div class="det__linha"><dt>Turno</dt><dd>{{ ficha.turno === 'dia' ? 'Dia' : 'Noite' }}</dd></div>
       <div class="det__linha">
         <dt>Carros</dt>
@@ -145,8 +148,8 @@
     @if (ficha.manobristas.length) {
       <p class="det__titulo">Equipe</p>
       <ul class="det__lista">
-        @for (m of ficha.manobristas; track m.nome) {
-          <li><span>{{ m.nome }}</span><span>{{ m.diaria | currencyBr }}</span></li>
+        @for (m of ficha.manobristas; track m.manobristaId) {
+          <li><span>{{ nomeManobrista(m.manobristaId) }}</span><span>{{ m.diaria | currencyBr }}</span></li>
         }
       </ul>
     }
@@ -161,7 +164,10 @@
     }
 
     <div class="det__acoes">
-      <button type="button" class="pf-btn pf-btn--ghost" (click)="paraExcluir.set(ficha); detalhe.set(null)">Excluir ficha</button>
+      @if (podeEditar()) {
+        <button type="button" class="pf-btn pf-btn--ghost" (click)="paraExcluir.set(ficha); detalhe.set(null)">Excluir ficha</button>
+        <a class="pf-btn pf-btn--ghost" [routerLink]="['/app/fichas', ficha.id, 'editar']">Editar</a>
+      }
       <button type="button" class="pf-btn pf-btn--dark" (click)="detalhe.set(null)">Fechar</button>
     </div>
   </pf-modal>
@@ -170,7 +176,7 @@
 <!-- Exclusão -->
 @if (paraExcluir(); as ficha) {
   <pf-confirm
-    [message]="'A ficha de ' + (ficha.data | dataBr) + ' (' + ficha.unidade + ') será removida definitivamente.'"
+    [message]="'A ficha de ' + (ficha.data | dataBr) + ' (' + nomeUnidade(ficha.unidadeId) + ') será removida definitivamente.'"
     (confirmar)="confirmarExclusao()"
     (cancelar)="paraExcluir.set(null)"
   />

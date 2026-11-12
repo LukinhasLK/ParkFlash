@@ -32,8 +32,8 @@
           <p class="card-socio__nome">{{ s.nome }}</p>
           @if (participacoes(s).length) {
             <ul class="card-socio__lista">
-              @for (p of participacoes(s); track p.unidade) {
-                <li><span>{{ p.unidade }}</span><span class="pf-badge pf-badge--gray">{{ p.percentual }}%</span></li>
+              @for (p of participacoes(s); track p.unidadeId) {
+                <li><span>{{ nomeUnidade(p.unidadeId) }}</span><span class="pf-badge pf-badge--gray">{{ p.percentual }}%</span></li>
               }
             </ul>
           } @else {
@@ -49,8 +49,8 @@
           <thead>
             <tr>
               <th>Nome</th>
-              @for (unidade of unidades(); track unidade) {
-                <th class="num">{{ unidade }}</th>
+              @for (u of unidades(); track u.id) {
+                <th class="num">{{ u.nome }}</th>
               }
               <th class="actions">Ações</th>
             </tr>
@@ -59,9 +59,9 @@
             @for (s of socios(); track s.id) {
               <tr>
                 <td class="forte">{{ s.nome }}</td>
-                @for (unidade of unidades(); track unidade) {
+                @for (u of unidades(); track u.id) {
                   <td class="num">
-                    @if (percentual(s, unidade); as pct) {
+                    @if (percentual(s, u.id); as pct) {
                       <span class="pf-badge pf-badge--gray">{{ pct }}%</span>
                     } @else {
                       <span class="tracinho">—</span>

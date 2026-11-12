@@ -1,7 +1,7 @@
 <div class="pf-page dash">
   <header class="dash__head">
     <div>
-      <p class="dash__periodo">{{ periodo }}</p>
+      <p class="dash__periodo">{{ periodo() }}</p>
       <h1 class="dash__saudacao">Olá, {{ primeiroNome() }}</h1>
     </div>
 
@@ -10,12 +10,30 @@
         <pf-icon name="plus" [size]="17" />
         Ficha
       </a>
-      <button type="button" class="dash__sino" aria-label="Notificações">
-        <pf-icon name="sino" [size]="19" />
-        @if (notificacoes() > 0) {
-          <span class="dash__badge">{{ notificacoes() }}</span>
+      <div class="dash__alertas">
+        <button
+          type="button"
+          class="dash__sino"
+          aria-label="Alertas"
+          [attr.aria-expanded]="alertasAbertos()"
+          (click)="alertasAbertos.set(!alertasAbertos())"
+        >
+          <pf-icon name="sino" [size]="19" />
+          @if (alertas().length > 0) {
+            <span class="dash__badge">{{ alertas().length }}</span>
+          }
+        </button>
+        @if (alertasAbertos()) {
+          <div class="alertas" role="dialog" aria-label="Alertas">
+            <p class="alertas__titulo">Alertas</p>
+            @for (alerta of alertas(); track alerta.texto) {
+              <a class="alertas__item" [routerLink]="alerta.rota" (click)="alertasAbertos.set(false)">{{ alerta.texto }}</a>
+            } @empty {
+              <p class="alertas__vazio">Nenhum alerta. Tudo em dia!</p>
+            }
+          </div>
         }
-      </button>
+      </div>
     </div>
   </header>
 
@@ -25,9 +43,10 @@
     <pf-kpi-card label="Fichas" [value]="resumo().fichas | numeroBr" />
     <pf-kpi-card label="Carros" [value]="resumo().carros | numeroBr" />
     <pf-kpi-card
-      label="Lucro líquido"
-      [value]="resumo().liquido | currencyBr"
-      [tone]="resumo().liquido >= 0 ? 'success' : 'danger'"
+      label="Resultado do mês"
+      [value]="resultado() | currencyBr"
+      hint="Lucro das fichas − despesas fixas"
+      [tone]="resultado() >= 0 ? 'success' : 'danger'"
     />
   </section>
 
@@ -51,7 +70,7 @@
       <article class="pf-card">
         <div class="pf-card__head">
           <h2 class="pf-card__title">Evolução — 6 meses</h2>
-          <p class="pf-card__subtitle">Lucro líquido mensal</p>
+          <p class="pf-card__subtitle">Lucro das fichas por mês</p>
         </div>
         <div class="pf-card__body">
           <pf-chart [config]="graficoBarras()" [height]="250" ariaLabel="Evolução do lucro líquido nos últimos seis meses" />
@@ -71,9 +90,15 @@
     }
 
     <article class="pf-card info">
-      <p class="info__label">Total de despesas</p>
+      <p class="info__label">Lucro das fichas</p>
+      <p class="info__valor" [class.info__valor--danger]="resumo().liquido < 0">{{ resumo().liquido | currencyBr }}</p>
+      <p class="info__hint">Após taxas, diárias e despesas das fichas</p>
+    </article>
+
+    <article class="pf-card info">
+      <p class="info__label">Despesas fixas</p>
       <p class="info__valor info__valor--danger">{{ totalDespesas() | currencyBr }}</p>
-      <p class="info__hint">{{ periodoLegivel }}</p>
+      <p class="info__hint">{{ periodoLegivel() }}</p>
     </article>
   </section>
 </div>

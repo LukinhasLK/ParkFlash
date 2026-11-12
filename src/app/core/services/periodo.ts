@@ -9,19 +9,27 @@ export const DIAS_SEMANA = [
   'Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado',
 ] as const;
 
-/** Período de referência da demo. */
-export const MES_ATUAL = 6;
-export const ANO_ATUAL = 2026;
+/** Valor do filtro de unidade que representa "todas as unidades". */
+export const TODAS_UNIDADES = 0;
 
-export const ANOS_DISPONIVEIS = [2026, 2025, 2024];
+/** Data de hoje no fuso local (`toISOString` usa UTC e vira o dia após as 21h no Brasil). */
+export function hojeIso(agora = new Date()): string {
+  const mes = String(agora.getMonth() + 1).padStart(2, '0');
+  const dia = String(agora.getDate()).padStart(2, '0');
+  return `${agora.getFullYear()}-${mes}-${dia}`;
+}
 
-export const TODAS_UNIDADES = 'Todas';
+export interface Periodo {
+  mes: number;
+  ano: number;
+}
 
 export interface Filtro {
   /** 0 = todos os meses. */
   mes: number;
   ano: number;
-  unidade: string;
+  /** `TODAS_UNIDADES` (0) = todas. */
+  unidadeId: number;
   busca?: string;
 }
 
@@ -60,9 +68,9 @@ export function rotuloPeriodo(mes: number, ano: number): string {
 }
 
 /** Aplica mês/ano/unidade a qualquer registro datado. */
-export function noPeriodo(registro: { data: string; unidade: string }, filtro: Filtro): boolean {
+export function noPeriodo(registro: { data: string; unidadeId: number }, filtro: Filtro): boolean {
   if (anoDe(registro.data) !== filtro.ano) return false;
   if (filtro.mes !== 0 && mesDe(registro.data) !== filtro.mes) return false;
-  if (filtro.unidade !== TODAS_UNIDADES && registro.unidade !== filtro.unidade) return false;
+  if (filtro.unidadeId !== TODAS_UNIDADES && registro.unidadeId !== filtro.unidadeId) return false;
   return true;
 }

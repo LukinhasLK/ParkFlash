@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
-import { corDoAvatar, NAV_ITEMS } from '../../nav-items';
+import { corDoAvatar, itensPermitidos, NAV_ITEMS } from '../../nav-items';
 import { IconComponent } from '../icon/icon.component';
 import { LogoComponent } from '../logo/logo.component';
 
@@ -17,7 +17,7 @@ export class SidebarComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
-  protected readonly itens = NAV_ITEMS;
+  protected readonly itens = computed(() => itensPermitidos(NAV_ITEMS, this.auth.nivel()));
   protected readonly usuario = this.auth.usuario;
   protected readonly inicial = this.auth.inicial;
 

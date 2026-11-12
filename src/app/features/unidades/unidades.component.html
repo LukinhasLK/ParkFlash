@@ -47,7 +47,7 @@
                 <td>{{ u.telefone || '—' }}</td>
                 <td class="actions">
                   <button type="button" class="acao" (click)="abrir(u)">Editar</button>
-                  <button type="button" class="acao acao--danger" (click)="paraExcluir.set(u)">Excluir</button>
+                  <button type="button" class="acao acao--danger" (click)="pedirExclusao(u)">Excluir</button>
                 </td>
               </tr>
             }
@@ -75,7 +75,8 @@
 
       <div class="pf-field">
         <label class="pf-label" for="u-telefone">Telefone</label>
-        <input id="u-telefone" class="pf-input" type="tel" placeholder="(11) 0000-0000" formControlName="telefone" />
+        <input id="u-telefone" class="pf-input" type="tel" pfMascara="telefone" placeholder="(11) 0000-0000" formControlName="telefone" />
+        @if (invalido('telefone')) { <span class="pf-error">Telefone com DDD (10 ou 11 dígitos).</span> }
       </div>
 
       <div class="modal-form__acoes">
@@ -88,8 +89,17 @@
 
 @if (paraExcluir(); as u) {
   <pf-confirm
-    [message]="'A unidade ' + u.nome + ' será removida. As fichas já lançadas não mudam.'"
+    [message]="'A unidade ' + u.nome + ' será removida, junto com a participação dos sócios nela.'"
     (confirmar)="confirmarExclusao()"
     (cancelar)="paraExcluir.set(null)"
   />
+}
+
+@if (bloqueada(); as u) {
+  <pf-modal title="Não é possível excluir" (fechar)="bloqueada.set(null)">
+    <p>A unidade {{ u.nome }} tem fichas ou despesas lançadas. Para manter o histórico, edite o cadastro em vez de excluir.</p>
+    <div class="modal-form__acoes">
+      <button type="button" class="pf-btn pf-btn--dark" (click)="bloqueada.set(null)">Entendi</button>
+    </div>
+  </pf-modal>
 }

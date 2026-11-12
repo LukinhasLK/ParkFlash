@@ -1,5 +1,5 @@
 <div class="pf-page">
-  <pf-page-header title="Despesas" subtitle="Todas as despesas registradas nas fichas">
+  <pf-page-header title="Despesas" subtitle="Despesas fixas (aluguel, seguro, manutenção) — descontadas do resultado do mês">
     <button type="button" class="pf-btn pf-btn--primary" (click)="abrirForm()">
       <pf-icon name="plus" [size]="17" />
       Nova despesa
@@ -15,12 +15,12 @@
     </select>
 
     <select class="pf-select" [ngModel]="ano()" (ngModelChange)="ano.set(+$event)" aria-label="Ano">
-      @for (a of anos; track a) { <option [value]="a">{{ a }}</option> }
+      @for (a of anos(); track a) { <option [value]="a">{{ a }}</option> }
     </select>
 
-    <select class="pf-select" [ngModel]="unidade()" (ngModelChange)="unidade.set($event)" aria-label="Unidade">
-      <option [value]="todas">Todas as unidades</option>
-      @for (nome of unidades(); track nome) { <option [value]="nome">{{ nome }}</option> }
+    <select class="pf-select" [ngModel]="unidadeId()" (ngModelChange)="unidadeId.set($event)" aria-label="Unidade">
+      <option [ngValue]="todas">Todas as unidades</option>
+      @for (u of unidades(); track u.id) { <option [ngValue]="u.id">{{ u.nome }}</option> }
     </select>
 
     <select class="pf-select" [ngModel]="categoria()" (ngModelChange)="categoria.set($event)" aria-label="Categoria">
@@ -47,7 +47,7 @@
           <div class="card-despesa__info">
             <span class="pf-badge" [class]="classe(d.categoria)">{{ d.categoria }}</span>
             <p class="card-despesa__desc">{{ d.descricao }}</p>
-            <p class="card-despesa__meta">{{ d.unidade }} · {{ d.data | dataBr }}</p>
+            <p class="card-despesa__meta">{{ nomeUnidade(d.unidadeId) }} · {{ d.data | dataBr }}</p>
           </div>
           <p class="card-despesa__valor">{{ d.valor | currencyBr }}</p>
         </article>
@@ -71,12 +71,13 @@
             @for (d of despesas(); track d.id) {
               <tr>
                 <td>{{ d.data | dataBr }}</td>
-                <td>{{ d.unidade }}</td>
+                <td>{{ nomeUnidade(d.unidadeId) }}</td>
                 <td><span class="pf-badge" [class]="classe(d.categoria)">{{ d.categoria }}</span></td>
                 <td>{{ d.descricao }}</td>
                 <td class="num">{{ d.valor | currencyBr }}</td>
                 <td class="actions">
                   <button type="button" class="acao" (click)="detalhe.set(d)">Ver</button>
+                  <button type="button" class="acao" (click)="abrirForm(d)">Editar</button>
                   <button type="button" class="acao acao--danger" (click)="paraExcluir.set(d)">Excluir</button>
                 </td>
               </tr>
@@ -90,7 +91,7 @@
 
 <!-- Nova despesa -->
 @if (formAberto()) {
-  <pf-modal title="Nova despesa" (fechar)="formAberto.set(false)">
+  <pf-modal [title]="emEdicao() ? 'Editar despesa' : 'Nova despesa'" (fechar)="formAberto.set(false)">
     <form class="modal-form" [formGroup]="form" (ngSubmit)="salvar()" novalidate>
       <div class="modal-form__par">
         <div class="pf-field">
@@ -100,11 +101,11 @@
 
         <div class="pf-field">
           <label class="pf-label" for="d-unidade">Unidade</label>
-          <select id="d-unidade" class="pf-select" formControlName="unidade">
-            <option value="" disabled>Selecione</option>
-            @for (nome of unidades(); track nome) { <option [value]="nome">{{ nome }}</option> }
+          <select id="d-unidade" class="pf-select" formControlName="unidadeId">
+            <option [ngValue]="null" disabled>Selecione</option>
+            @for (u of unidades(); track u.id) { <option [ngValue]="u.id">{{ u.nome }}</option> }
           </select>
-          @if (invalido('unidade')) { <span class="pf-error">Escolha a unidade.</span> }
+          @if (invalido('unidadeId')) { <span class="pf-error">Escolha a unidade.</span> }
         </div>
       </div>
 
@@ -123,13 +124,13 @@
 
       <div class="pf-field">
         <label class="pf-label" for="d-valor">Valor (R$)</label>
-        <input id="d-valor" class="pf-input" type="number" min="0" step="0.01" inputmode="decimal" formControlName="valor" />
+        <input id="d-valor" class="pf-input" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0,00" formControlName="valor" />
         @if (invalido('valor')) { <span class="pf-error">Informe um valor maior que zero.</span> }
       </div>
 
       <div class="modal-form__acoes">
         <button type="button" class="pf-btn pf-btn--ghost" (click)="formAberto.set(false)">Cancelar</button>
-        <button type="submit" class="pf-btn pf-btn--primary">Salvar despesa</button>
+        <button type="submit" class="pf-btn pf-btn--primary">{{ emEdicao() ? 'Salvar alterações' : 'Salvar despesa' }}</button>
       </div>
     </form>
   </pf-modal>
@@ -140,7 +141,7 @@
   <pf-modal title="Detalhe da despesa" (fechar)="detalhe.set(null)">
     <dl class="det">
       <div><dt>Data</dt><dd>{{ d.data | dataBr }}</dd></div>
-      <div><dt>Unidade</dt><dd>{{ d.unidade }}</dd></div>
+      <div><dt>Unidade</dt><dd>{{ nomeUnidade(d.unidadeId) }}</dd></div>
       <div><dt>Categoria</dt><dd><span class="pf-badge" [class]="classe(d.categoria)">{{ d.categoria }}</span></dd></div>
       <div><dt>Descrição</dt><dd>{{ d.descricao }}</dd></div>
       <div class="det--total"><dt>Valor</dt><dd>{{ d.valor | currencyBr }}</dd></div>
@@ -148,6 +149,7 @@
 
     <div class="modal-form__acoes">
       <button type="button" class="pf-btn pf-btn--ghost" (click)="paraExcluir.set(d); detalhe.set(null)">Excluir</button>
+      <button type="button" class="pf-btn pf-btn--ghost" (click)="abrirForm(d)">Editar</button>
       <button type="button" class="pf-btn pf-btn--dark" (click)="detalhe.set(null)">Fechar</button>
     </div>
   </pf-modal>

@@ -1,3 +1,6 @@
+import { NivelAcesso } from '../core/models';
+import { podeAcessar } from '../core/services/permissoes';
+
 export interface NavItem {
   label: string;
   rota: string;
@@ -26,10 +29,12 @@ export const BOTTOM_NAV_ITEMS: NavItem[] = [
   { label: 'Despesas', rota: '/app/despesas', icone: 'despesas' },
 ];
 
-/** Itens que só aparecem na folha "Mais" do mobile. */
-export const MAIS_ITEMS: NavItem[] = NAV_ITEMS.filter(
-  (item) => !BOTTOM_NAV_ITEMS.some((b) => b.rota === item.rota)
-);
+export const PERFIL_ITEM: NavItem = { label: 'Meu perfil', rota: '/app/perfil', icone: 'usuarios' };
+
+/** Itens que o nível do usuário pode ver (mesma regra do roleGuard). */
+export function itensPermitidos(itens: NavItem[], nivel: NivelAcesso | null): NavItem[] {
+  return itens.filter((item) => podeAcessar(nivel, item.rota.replace('/app/', '')));
+}
 
 /** Cor determinística do avatar a partir do nome. */
 const CORES_AVATAR = ['#6366f1', '#0ea5e9', '#f59e0b', '#10b981', '#ec4899', '#8b5cf6', '#ef4444', '#14b8a6'];

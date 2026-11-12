@@ -42,7 +42,9 @@ export class UsuariosComponent {
     nome: ['', Validators.required],
     email: ['', [Validators.required, Validators.email]],
     nivel: ['Operador' as NivelAcesso, Validators.required],
+    senha: [''],
   });
+  protected readonly emailDuplicado = signal(false);
 
   protected classe(nivel: NivelAcesso): string {
     return CLASSE_NIVEL[nivel];
@@ -63,7 +65,12 @@ export class UsuariosComponent {
       nome: usuario?.nome ?? '',
       email: usuario?.email ?? '',
       nivel: usuario?.nivel ?? 'Operador',
+      senha: '',
     });
+    // Senha obrigatória só no cadastro; na edição, vazio mantém a atual.
+    this.form.controls.senha.setValidators(usuario ? [Validators.minLength(6)] : [Validators.required, Validators.minLength(6)]);
+    this.form.controls.senha.updateValueAndValidity();
+    this.emailDuplicado.set(false);
     this.formAberto.set(true);
   }
 
@@ -73,7 +80,13 @@ export class UsuariosComponent {
       return;
     }
 
-    this.usuariosService.salvarUsuario({ ...this.form.getRawValue(), id: this.editando()?.id });
+    const dados = this.form.getRawValue();
+    if (this.usuariosService.emailEmUso(dados.email, this.editando()?.id)) {
+      this.emailDuplicado.set(true);
+      return;
+    }
+
+    this.usuariosService.salvarUsuario({ ...dados, id: this.editando()?.id });
     this.formAberto.set(false);
   }
 

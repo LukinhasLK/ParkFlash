@@ -3,6 +3,8 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { LayoutService } from '../../../core/services/layout.service';
+import { rotaInicial } from '../../../core/services/permissoes';
+import { SENHA_DEMO } from '../../../core/services/seed';
 import { LogoComponent } from '../../../shared/components/logo/logo.component';
 
 @Component({
@@ -21,9 +23,11 @@ export class LoginComponent {
 
   protected readonly isMobile = inject(LayoutService).isMobile;
   protected readonly erro = signal('');
+  protected readonly ajudaSenha = signal(false);
+  protected readonly senhaDemo = SENHA_DEMO;
 
   protected readonly form = this.fb.nonNullable.group({
-    identificador: ['lucasrodrigues.10@icloud.com', [Validators.required]],
+    identificador: ['', [Validators.required]],
     senha: ['', [Validators.required, Validators.minLength(4)]],
   });
 
@@ -38,11 +42,11 @@ export class LoginComponent {
     const { identificador, senha } = this.form.getRawValue();
 
     if (!this.auth.login(identificador, senha)) {
-      this.erro.set('Não foi possível entrar. Confira os dados e tente novamente.');
+      this.erro.set('E-mail/usuário ou senha incorretos.');
       return;
     }
 
-    const destino = this.rota.snapshot.queryParamMap.get('redirectTo') ?? '/app/dashboard';
+    const destino = this.rota.snapshot.queryParamMap.get('redirectTo') ?? rotaInicial(this.auth.nivel());
     this.router.navigateByUrl(destino);
   }
 

@@ -4,7 +4,7 @@
   </div>
 
   <nav class="sidebar__nav" aria-label="Navegação principal">
-    @for (item of itens; track item.rota) {
+    @for (item of itens(); track item.rota) {
       <a
         class="nav-item"
         [routerLink]="item.rota"
@@ -19,11 +19,13 @@
 
   @if (usuario(); as u) {
     <footer class="sidebar__user">
-      <span class="pf-avatar" [style.background]="cor(u.nome)">{{ inicial() }}</span>
-      <span class="sidebar__user-info">
-        <span class="sidebar__user-name">{{ u.nome }}</span>
-        <span class="sidebar__user-role">{{ u.nivel }}</span>
-      </span>
+      <a class="sidebar__user-link" routerLink="/app/perfil" title="Meu perfil">
+        <span class="pf-avatar" [style.background]="cor(u.nome)">{{ inicial() }}</span>
+        <span class="sidebar__user-info">
+          <span class="sidebar__user-name">{{ u.nome }}</span>
+          <span class="sidebar__user-role">{{ u.nivel }}</span>
+        </span>
+      </a>
       <button type="button" class="sidebar__logout" aria-label="Sair" title="Sair" (click)="sair()">
         <pf-icon name="sair" [size]="17" />
       </button>
