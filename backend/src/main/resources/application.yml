@@ -27,6 +27,11 @@ parkflash:
     segredo: ${JWT_SEGREDO:parkflash-segredo-de-desenvolvimento-troque-em-producao}
     expiracao: ${JWT_EXPIRACAO:8h}
   cors-origens: ${CORS_ORIGENS:http://localhost:4200}
+  # Usado só se o banco começar sem usuários (ex.: FLYWAY_LOCATIONS sem db/demo).
+  admin-inicial:
+    nome: ${ADMIN_NOME:Administrador}
+    email: ${ADMIN_EMAIL:}
+    senha: ${ADMIN_SENHA:}
 
 springdoc:
   swagger-ui:

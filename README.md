@@ -152,11 +152,12 @@ Erros voltam como `{ "status", "mensagem", "campos" }` (400 validação, 401 sem
 
 | Variável | Padrão | Uso |
 |---|---|---|
-| `JWT_SEGREDO` | segredo de desenvolvimento | **troque em produção** (mínimo 32 caracteres) |
+| `JWT_SEGREDO` | segredo de desenvolvimento | **obrigatório no perfil `postgres`** (mínimo 32 caracteres) |
 | `JWT_EXPIRACAO` | `8h` | validade do token |
 | `CORS_ORIGENS` | `http://localhost:4200` | origens liberadas |
 | `PORT` | `8080` | porta do servidor |
 | `FLYWAY_LOCATIONS` | `classpath:db/migration,classpath:db/demo` | use só `classpath:db/migration` para começar sem dados de demonstração |
+| `ADMIN_EMAIL` / `ADMIN_SENHA` / `ADMIN_NOME` | — | se o banco começar sem usuários, cria o primeiro Proprietário |
 | `DB_URL` / `DB_USUARIO` / `DB_SENHA` | `jdbc:postgresql://localhost:5432/parkflash` | só no perfil `postgres` |
 
 Para usar PostgreSQL:
@@ -164,7 +165,8 @@ Para usar PostgreSQL:
 ```bash
 createdb parkflash
 cd backend
-SPRING_PROFILES_ACTIVE=postgres DB_USUARIO=postgres DB_SENHA=sua-senha ./mvnw spring-boot:run
+SPRING_PROFILES_ACTIVE=postgres JWT_SEGREDO=um-segredo-longo-com-32-caracteres-ou-mais \
+  DB_USUARIO=postgres DB_SENHA=sua-senha ./mvnw spring-boot:run
 ```
 
 ## Cores dos gráficos
