@@ -175,7 +175,7 @@ Validações aplicadas no servidor:
 
 - Não pode haver duas fichas com a mesma data, unidade e turno.
 - O mesmo manobrista não pode aparecer duas vezes na ficha.
-- Os percentuais dos sócios de uma unidade devem somar 100%.
+- O percentual de cada sócio fica entre 0% e 100%. A tela de Sócios avisa quando o rateio de uma unidade não soma 100%.
 - E-mail de usuário é único.
 - Unidade ou manobrista com histórico não pode ser excluído.
 - Os totais enviados pelo front são ignorados: o servidor recalcula tudo.
