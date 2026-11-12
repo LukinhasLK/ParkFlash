@@ -12,6 +12,7 @@ import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { CurrencyBrPipe } from '../../shared/pipes/currency-br.pipe';
 import { DataBrPipe } from '../../shared/pipes/data-br.pipe';
+import { AvisoService } from '../../core/services/aviso.service';
 
 @Component({
   selector: 'pf-despesas',
@@ -26,6 +27,7 @@ import { DataBrPipe } from '../../shared/pipes/data-br.pipe';
 })
 export class DespesasComponent {
   private readonly despesasService = inject(DespesasService);
+  private readonly aviso = inject(AvisoService);
   private readonly unidadesService = inject(UnidadesService);
   private readonly fichasService = inject(FichasService);
   private readonly fb = inject(FormBuilder);
@@ -92,7 +94,7 @@ export class DespesasComponent {
     this.formAberto.set(true);
   }
 
-  protected salvar(): void {
+  protected async salvar(): Promise<void> {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -101,18 +103,29 @@ export class DespesasComponent {
     const v = this.form.getRawValue();
     const dados = { ...v, unidadeId: v.unidadeId!, valor: Number(v.valor) };
     const editada = this.emEdicao();
-    if (editada) {
-      this.despesasService.atualizar({ ...dados, id: editada.id });
-    } else {
-      this.despesasService.adicionar(dados);
+    try {
+      if (editada) {
+        await this.despesasService.atualizar({ ...dados, id: editada.id });
+      } else {
+        await this.despesasService.adicionar(dados);
+      }
+      this.formAberto.set(false);
+      this.aviso.sucesso('Despesa salva.');
+    } catch (erro) {
+      this.aviso.erro(erro);
     }
-    this.formAberto.set(false);
   }
 
-  protected confirmarExclusao(): void {
+  protected async confirmarExclusao(): Promise<void> {
     const despesa = this.paraExcluir();
-    if (despesa) this.despesasService.excluir(despesa.id);
     this.paraExcluir.set(null);
+    if (!despesa) return;
+    try {
+      await this.despesasService.excluir(despesa.id);
+      this.aviso.sucesso('Despesa excluída.');
+    } catch (erro) {
+      this.aviso.erro(erro);
+    }
   }
 
   protected invalido(nome: string): boolean {

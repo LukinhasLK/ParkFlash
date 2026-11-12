@@ -1,11 +1,12 @@
-import { Injectable, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { inject, Injectable, signal } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { CategoriaDespesa, Despesa } from '../models';
 import { round2 } from './calc';
 import { Filtro, noPeriodo } from './periodo';
-import { DESPESAS_SEED } from './seed';
-import { carregar, salvar } from './storage';
+import { API_URL } from './api';
 
-const CHAVE = 'parkflash.despesas';
+const URL = `${API_URL}/despesas`;
 
 export const TODAS_CATEGORIAS = 'Todas';
 
@@ -19,9 +20,18 @@ export const CLASSE_CATEGORIA: Record<CategoriaDespesa, string> = {
 
 @Injectable({ providedIn: 'root' })
 export class DespesasService {
-  private readonly _despesas = signal<Despesa[]>(carregar(CHAVE, DESPESAS_SEED));
+  private readonly http = inject(HttpClient);
+  private readonly _despesas = signal<Despesa[]>([]);
 
   readonly despesas = this._despesas.asReadonly();
+
+  async carregar(): Promise<void> {
+    this._despesas.set(await firstValueFrom(this.http.get<Despesa[]>(URL)));
+  }
+
+  limpar(): void {
+    this._despesas.set([]);
+  }
 
   filtrar(filtro: Filtro & { categoria?: string }): Despesa[] {
     return this._despesas()
@@ -34,29 +44,24 @@ export class DespesasService {
     return round2(despesas.reduce((soma, d) => soma + d.valor, 0));
   }
 
-  adicionar(despesa: Omit<Despesa, 'id'>): void {
-    this._despesas.update((lista) => [
-      { ...despesa, id: lista.reduce((maior, d) => Math.max(maior, d.id), 0) + 1 },
-      ...lista,
-    ]);
-    this.persistir();
+  async adicionar(despesa: Omit<Despesa, 'id'>): Promise<Despesa> {
+    const salva = await firstValueFrom(this.http.post<Despesa>(URL, despesa));
+    this._despesas.update((lista) => [salva, ...lista]);
+    return salva;
   }
 
-  atualizar(despesa: Despesa): void {
-    this._despesas.update((lista) => lista.map((d) => (d.id === despesa.id ? despesa : d)));
-    this.persistir();
+  async atualizar(despesa: Despesa): Promise<Despesa> {
+    const salva = await firstValueFrom(this.http.put<Despesa>(`${URL}/${despesa.id}`, despesa));
+    this._despesas.update((lista) => lista.map((d) => (d.id === salva.id ? salva : d)));
+    return salva;
   }
 
   usaUnidade(unidadeId: number): boolean {
     return this._despesas().some((d) => d.unidadeId === unidadeId);
   }
 
-  excluir(id: number): void {
+  async excluir(id: number): Promise<void> {
+    await firstValueFrom(this.http.delete<void>(`${URL}/${id}`));
     this._despesas.update((lista) => lista.filter((d) => d.id !== id));
-    this.persistir();
-  }
-
-  private persistir(): void {
-    salvar(CHAVE, this._despesas());
   }
 }

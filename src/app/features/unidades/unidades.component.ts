@@ -11,6 +11,7 @@ import { ConfirmComponent } from '../../shared/components/confirm/confirm.compon
 import { IconComponent } from '../../shared/components/icon/icon.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { AvisoService } from '../../core/services/aviso.service';
 
 @Component({
   selector: 'pf-unidades',
@@ -22,6 +23,7 @@ import { PageHeaderComponent } from '../../shared/components/page-header/page-he
 })
 export class UnidadesComponent {
   private readonly unidadesService = inject(UnidadesService);
+  private readonly aviso = inject(AvisoService);
   private readonly fichasService = inject(FichasService);
   private readonly despesasService = inject(DespesasService);
   private readonly sociosService = inject(SociosService);
@@ -51,14 +53,19 @@ export class UnidadesComponent {
     this.formAberto.set(true);
   }
 
-  protected salvar(): void {
+  protected async salvar(): Promise<void> {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
 
-    this.unidadesService.salvarUnidade({ ...this.form.getRawValue(), id: this.editando()?.id });
-    this.formAberto.set(false);
+    try {
+      await this.unidadesService.salvarUnidade({ ...this.form.getRawValue(), id: this.editando()?.id });
+      this.formAberto.set(false);
+      this.aviso.sucesso('Unidade salva.');
+    } catch (erro) {
+      this.aviso.erro(erro);
+    }
   }
 
   /** Unidades com fichas ou despesas não podem ser excluídas (o histórico perderia a referência). */
@@ -70,13 +77,17 @@ export class UnidadesComponent {
     }
   }
 
-  protected confirmarExclusao(): void {
+  protected async confirmarExclusao(): Promise<void> {
     const unidade = this.paraExcluir();
-    if (unidade) {
-      this.sociosService.removerUnidade(unidade.id);
-      this.unidadesService.excluir(unidade.id);
-    }
     this.paraExcluir.set(null);
+    if (!unidade) return;
+    try {
+      await this.unidadesService.excluir(unidade.id);
+      this.sociosService.removerUnidade(unidade.id);
+      this.aviso.sucesso('Unidade excluída.');
+    } catch (erro) {
+      this.aviso.erro(erro);
+    }
   }
 
   protected invalido(nome: string): boolean {

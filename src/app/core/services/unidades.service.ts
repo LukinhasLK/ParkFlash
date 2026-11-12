@@ -1,41 +1,45 @@
-import { computed, Injectable, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { computed, inject, Injectable, signal } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { Unidade } from '../models';
-import { UNIDADES_SEED } from './seed';
-import { carregar, salvar } from './storage';
+import { API_URL } from './api';
 
-const CHAVE = 'parkflash.unidades';
+const URL = `${API_URL}/unidades`;
 
 @Injectable({ providedIn: 'root' })
 export class UnidadesService {
-  private readonly _unidades = signal<Unidade[]>(carregar(CHAVE, UNIDADES_SEED));
+  private readonly http = inject(HttpClient);
+  private readonly _unidades = signal<Unidade[]>([]);
 
   readonly unidades = this._unidades.asReadonly();
   readonly nomes = computed(() => this._unidades().map((u) => u.nome));
+
+  async carregar(): Promise<void> {
+    this._unidades.set(await firstValueFrom(this.http.get<Unidade[]>(URL)));
+  }
+
+  limpar(): void {
+    this._unidades.set([]);
+  }
 
   /** Nome para exibição; registros antigos de uma unidade removida aparecem como "—". */
   nome(id: number): string {
     return this._unidades().find((u) => u.id === id)?.nome ?? '—';
   }
 
-  salvarUnidade(unidade: Omit<Unidade, 'id'> & { id?: number }): void {
-    this._unidades.update((lista) =>
-      unidade.id
-        ? lista.map((u) => (u.id === unidade.id ? { ...u, ...unidade, id: u.id } : u))
-        : [...lista, { ...unidade, id: this.proximoId(lista) }]
+  async salvarUnidade(unidade: Omit<Unidade, 'id'> & { id?: number }): Promise<Unidade> {
+    const salva = await firstValueFrom(
+      unidade.id ? this.http.put<Unidade>(`${URL}/${unidade.id}`, unidade) : this.http.post<Unidade>(URL, unidade)
     );
-    this.persistir();
+    this._unidades.update((lista) =>
+      unidade.id ? lista.map((u) => (u.id === salva.id ? salva : u)) : [...lista, salva]
+    );
+    return salva;
   }
 
-  excluir(id: number): void {
+  /** O servidor recusa (409) se houver fichas ou despesas; a participação dos sócios sai junto. */
+  async excluir(id: number): Promise<void> {
+    await firstValueFrom(this.http.delete<void>(`${URL}/${id}`));
     this._unidades.update((lista) => lista.filter((u) => u.id !== id));
-    this.persistir();
-  }
-
-  private proximoId(lista: Unidade[]): number {
-    return lista.reduce((maior, u) => Math.max(maior, u.id), 0) + 1;
-  }
-
-  private persistir(): void {
-    salvar(CHAVE, this._unidades());
   }
 }

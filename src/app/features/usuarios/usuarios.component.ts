@@ -9,6 +9,7 @@ import { ConfirmComponent } from '../../shared/components/confirm/confirm.compon
 import { IconComponent } from '../../shared/components/icon/icon.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
+import { AvisoService } from '../../core/services/aviso.service';
 
 /** Cor do badge por nível de acesso. */
 const CLASSE_NIVEL: Record<NivelAcesso, string> = {
@@ -27,6 +28,7 @@ const CLASSE_NIVEL: Record<NivelAcesso, string> = {
 })
 export class UsuariosComponent {
   private readonly usuariosService = inject(UsuariosService);
+  private readonly aviso = inject(AvisoService);
   private readonly auth = inject(AuthService);
   private readonly fb = inject(FormBuilder);
 
@@ -74,7 +76,7 @@ export class UsuariosComponent {
     this.formAberto.set(true);
   }
 
-  protected salvar(): void {
+  protected async salvar(): Promise<void> {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -86,14 +88,25 @@ export class UsuariosComponent {
       return;
     }
 
-    this.usuariosService.salvarUsuario({ ...dados, id: this.editando()?.id });
-    this.formAberto.set(false);
+    try {
+      await this.usuariosService.salvarUsuario({ ...dados, id: this.editando()?.id });
+      this.formAberto.set(false);
+      this.aviso.sucesso('Usuário salvo.');
+    } catch (erro) {
+      this.aviso.erro(erro);
+    }
   }
 
-  protected confirmarExclusao(): void {
+  protected async confirmarExclusao(): Promise<void> {
     const usuario = this.paraExcluir();
-    if (usuario && !this.ehVoce(usuario)) this.usuariosService.excluir(usuario.id);
     this.paraExcluir.set(null);
+    if (!usuario || this.ehVoce(usuario)) return;
+    try {
+      await this.usuariosService.excluir(usuario.id);
+      this.aviso.sucesso('Usuário excluído.');
+    } catch (erro) {
+      this.aviso.erro(erro);
+    }
   }
 
   protected invalido(nome: string): boolean {

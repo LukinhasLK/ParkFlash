@@ -1,10 +1,10 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { mensagemDeErro } from '../../../core/services/api';
 import { AuthService } from '../../../core/services/auth.service';
 import { LayoutService } from '../../../core/services/layout.service';
 import { rotaInicial } from '../../../core/services/permissoes';
-import { SENHA_DEMO } from '../../../core/services/seed';
 import { LogoComponent } from '../../../shared/components/logo/logo.component';
 
 @Component({
@@ -24,14 +24,16 @@ export class LoginComponent {
   protected readonly isMobile = inject(LayoutService).isMobile;
   protected readonly erro = signal('');
   protected readonly ajudaSenha = signal(false);
-  protected readonly senhaDemo = SENHA_DEMO;
+  protected readonly senhaDemo = '123456';
 
   protected readonly form = this.fb.nonNullable.group({
     identificador: ['', [Validators.required]],
     senha: ['', [Validators.required, Validators.minLength(4)]],
   });
 
-  protected entrar(): void {
+  protected readonly entrando = signal(false);
+
+  protected async entrar(): Promise<void> {
     this.erro.set('');
 
     if (this.form.invalid) {
@@ -41,13 +43,21 @@ export class LoginComponent {
 
     const { identificador, senha } = this.form.getRawValue();
 
-    if (!this.auth.login(identificador, senha)) {
-      this.erro.set('E-mail/usuário ou senha incorretos.');
+    this.entrando.set(true);
+    try {
+      if (!(await this.auth.login(identificador, senha))) {
+        this.erro.set('E-mail/usuário ou senha incorretos.');
+        return;
+      }
+    } catch (erro) {
+      this.erro.set(mensagemDeErro(erro));
       return;
+    } finally {
+      this.entrando.set(false);
     }
 
     const destino = this.rota.snapshot.queryParamMap.get('redirectTo') ?? rotaInicial(this.auth.nivel());
-    this.router.navigateByUrl(destino);
+    void this.router.navigateByUrl(destino);
   }
 
   protected campoInvalido(nome: 'identificador' | 'senha'): boolean {

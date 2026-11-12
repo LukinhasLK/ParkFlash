@@ -1,10 +1,11 @@
+import { HttpClient } from '@angular/common/http';
 import { computed, Injectable, inject, signal } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { Socio } from '../models';
-import { SOCIOS_SEED } from './seed';
-import { carregar, salvar } from './storage';
+import { API_URL } from './api';
 import { UnidadesService } from './unidades.service';
 
-const CHAVE = 'parkflash.socios';
+const URL = `${API_URL}/socios`;
 
 export interface TotalUnidade {
   unidadeId: number;
@@ -19,9 +20,18 @@ export interface TotalUnidade {
 @Injectable({ providedIn: 'root' })
 export class SociosService {
   private readonly unidadesService = inject(UnidadesService);
-  private readonly _socios = signal<Socio[]>(carregar(CHAVE, SOCIOS_SEED));
+  private readonly http = inject(HttpClient);
+  private readonly _socios = signal<Socio[]>([]);
 
   readonly socios = this._socios.asReadonly();
+
+  async carregar(): Promise<void> {
+    this._socios.set(await firstValueFrom(this.http.get<Socio[]>(URL)));
+  }
+
+  limpar(): void {
+    this._socios.set([]);
+  }
 
   /** Soma dos percentuais por unidade — precisa fechar em 100%. */
   readonly totaisPorUnidade = computed<TotalUnidade[]>(() =>
@@ -47,31 +57,24 @@ export class SociosService {
     return this._socios().filter((s) => s.percentuais.some((p) => p.unidadeId === unidadeId && p.percentual > 0));
   }
 
-  salvarSocio(socio: Omit<Socio, 'id'> & { id?: number }): void {
-    const percentuais = socio.percentuais.filter((p) => p.percentual > 0);
-
-    this._socios.update((lista) =>
-      socio.id
-        ? lista.map((s) => (s.id === socio.id ? { ...s, nome: socio.nome, percentuais } : s))
-        : [...lista, { nome: socio.nome, percentuais, id: lista.reduce((maior, s) => Math.max(maior, s.id), 0) + 1 }]
+  async salvarSocio(socio: Omit<Socio, 'id'> & { id?: number }): Promise<Socio> {
+    const corpo = { nome: socio.nome, percentuais: socio.percentuais.filter((p) => p.percentual > 0) };
+    const salvo = await firstValueFrom(
+      socio.id ? this.http.put<Socio>(`${URL}/${socio.id}`, corpo) : this.http.post<Socio>(URL, corpo)
     );
-    this.persistir();
+    this._socios.update((lista) => (socio.id ? lista.map((s) => (s.id === salvo.id ? salvo : s)) : [...lista, salvo]));
+    return salvo;
   }
 
-  /** Remove a participação de todos os sócios numa unidade excluída. */
+  /** Reflete localmente a exclusão de uma unidade (o servidor já removeu a participação). */
   removerUnidade(unidadeId: number): void {
     this._socios.update((lista) =>
       lista.map((s) => ({ ...s, percentuais: s.percentuais.filter((p) => p.unidadeId !== unidadeId) }))
     );
-    this.persistir();
   }
 
-  excluir(id: number): void {
+  async excluir(id: number): Promise<void> {
+    await firstValueFrom(this.http.delete<void>(`${URL}/${id}`));
     this._socios.update((lista) => lista.filter((s) => s.id !== id));
-    this.persistir();
-  }
-
-  private persistir(): void {
-    salvar(CHAVE, this._socios());
   }
 }
