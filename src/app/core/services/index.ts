@@ -1,4 +1,6 @@
+export * from './api';
 export * from './auth.service';
+export * from './aviso.service';
 export * from './calc';
 export * from './despesas.service';
 export * from './fichas.service';

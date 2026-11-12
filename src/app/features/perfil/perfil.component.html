@@ -39,6 +39,6 @@
       <p class="perfil__msg" [class.perfil__msg--erro]="m.tipo === 'erro'" role="status">{{ m.texto }}</p>
     }
 
-    <button type="submit" class="pf-btn pf-btn--primary">Salvar nova senha</button>
+    <button type="submit" class="pf-btn pf-btn--primary" [disabled]="salvando()">Salvar nova senha</button>
   </form>
 </div>

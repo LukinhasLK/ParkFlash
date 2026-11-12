@@ -1,26 +1,36 @@
-import { Injectable, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { inject, Injectable, signal } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { Usuario } from '../models';
-import { USUARIOS_SEED } from './seed';
-import { carregar, salvar } from './storage';
+import { API_URL } from './api';
 
-const CHAVE = 'parkflash.usuarios';
+const URL = `${API_URL}/usuarios`;
 
+/** Cadastro de usuários (somente Proprietário). A API nunca devolve senha nem hash. */
 @Injectable({ providedIn: 'root' })
 export class UsuariosService {
-  private readonly _usuarios = signal<Usuario[]>(carregar(CHAVE, USUARIOS_SEED));
+  private readonly http = inject(HttpClient);
+  private readonly _usuarios = signal<Usuario[]>([]);
 
   readonly usuarios = this._usuarios.asReadonly();
 
+  async carregar(): Promise<void> {
+    this._usuarios.set(await firstValueFrom(this.http.get<Usuario[]>(URL)));
+  }
+
+  limpar(): void {
+    this._usuarios.set([]);
+  }
+
   /** Na edição, senha vazia mantém a senha atual. */
-  salvarUsuario(usuario: Omit<Usuario, 'id'> & { id?: number }): void {
-    const { senha, ...dados } = usuario;
-    const comSenha = senha ? { senha } : {};
-    this._usuarios.update((lista) =>
-      usuario.id
-        ? lista.map((u) => (u.id === usuario.id ? { ...u, ...dados, ...comSenha, id: u.id } : u))
-        : [...lista, { ...dados, ...comSenha, id: lista.reduce((maior, u) => Math.max(maior, u.id), 0) + 1 }]
+  async salvarUsuario(usuario: Omit<Usuario, 'id'> & { id?: number }): Promise<Usuario> {
+    const { id, ...dados } = usuario;
+    const corpo = { ...dados, senha: dados.senha || null };
+    const salvo = await firstValueFrom(
+      id ? this.http.put<Usuario>(`${URL}/${id}`, corpo) : this.http.post<Usuario>(URL, corpo)
     );
-    this.persistir();
+    this._usuarios.update((lista) => (id ? lista.map((u) => (u.id === salvo.id ? salvo : u)) : [...lista, salvo]));
+    return salvo;
   }
 
   emailEmUso(email: string, ignorarId?: number): boolean {
@@ -28,12 +38,8 @@ export class UsuariosService {
     return this._usuarios().some((u) => u.id !== ignorarId && u.email.toLowerCase() === busca);
   }
 
-  excluir(id: number): void {
+  async excluir(id: number): Promise<void> {
+    await firstValueFrom(this.http.delete<void>(`${URL}/${id}`));
     this._usuarios.update((lista) => lista.filter((u) => u.id !== id));
-    this.persistir();
-  }
-
-  private persistir(): void {
-    salvar(CHAVE, this._usuarios());
   }
 }

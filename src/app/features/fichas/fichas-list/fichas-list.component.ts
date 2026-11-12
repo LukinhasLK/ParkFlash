@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Ficha } from '../../../core/models';
+import { AvisoService } from '../../../core/services/aviso.service';
 import {
   calcLiquidoCartao,
   calcTaxaDescontada,
@@ -37,6 +38,7 @@ import { NumeroBrPipe } from '../../../shared/pipes/numero-br.pipe';
 })
 export class FichasListComponent {
   private readonly fichasService = inject(FichasService);
+  private readonly aviso = inject(AvisoService);
   private readonly unidadesService = inject(UnidadesService);
   private readonly manobristasService = inject(ManobristasService);
   private readonly auth = inject(AuthService);
@@ -86,10 +88,16 @@ export class FichasListComponent {
     };
   });
 
-  protected confirmarExclusao(): void {
+  protected async confirmarExclusao(): Promise<void> {
     const ficha = this.paraExcluir();
-    if (ficha) this.fichasService.excluir(ficha.id);
     this.paraExcluir.set(null);
+    if (!ficha) return;
+    try {
+      await this.fichasService.excluir(ficha.id);
+      this.aviso.sucesso('Ficha excluída.');
+    } catch (erro) {
+      this.aviso.erro(erro);
+    }
   }
 
   protected limparFiltros(): void {

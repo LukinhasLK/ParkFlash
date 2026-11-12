@@ -1,5 +1,6 @@
 import { afterNextRender, ChangeDetectionStrategy, Component, computed, ElementRef, inject, Injector, input, OnInit, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { AvisoService } from '../../../core/services/aviso.service';
 import {
   AbstractControl,
   FormArray,
@@ -10,7 +11,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Ficha, Turno } from '../../../core/models';
+import { Ficha, Manobrista, Turno } from '../../../core/models';
 import {
   calcLiquidoCartao,
   calcSaldoFinal,
@@ -69,6 +70,7 @@ export class NovaFichaComponent implements OnInit {
   readonly id = input<string>();
 
   private readonly fb = inject(FormBuilder);
+  private readonly aviso = inject(AvisoService);
   private readonly fichasService = inject(FichasService);
   private readonly manobristasService = inject(ManobristasService);
   private readonly sociosService = inject(SociosService);
@@ -191,13 +193,19 @@ export class NovaFichaComponent implements OnInit {
     this.despesas.removeAt(indice);
   }
 
-  protected salvarNovoManobrista(): void {
+  protected async salvarNovoManobrista(): Promise<void> {
     if (this.novoManobristaForm.invalid) {
       this.novoManobristaForm.markAllAsTouched();
       return;
     }
 
-    const criado = this.manobristasService.salvarManobrista(this.novoManobristaForm.getRawValue());
+    let criado: Manobrista;
+    try {
+      criado = await this.manobristasService.salvarManobrista(this.novoManobristaForm.getRawValue());
+    } catch (erro) {
+      this.aviso.erro(erro);
+      return;
+    }
 
     // Aproveita a primeira linha vazia da equipe, se houver.
     const vaga = this.manobristas.controls.find((grupo) => grupo.get('manobristaId')?.value == null);
@@ -320,7 +328,9 @@ export class NovaFichaComponent implements OnInit {
     return [0, 1, 2, 3].every((etapa) => this.etapaValida(etapa));
   });
 
-  protected lancar(): void {
+  protected readonly salvando = signal(false);
+
+  protected async lancar(): Promise<void> {
     this.enviado.set(true);
     const v = this.form.getRawValue();
     const editada = this.emEdicao();
@@ -351,13 +361,22 @@ export class NovaFichaComponent implements OnInit {
       totalLiquido: this.saldoFinal(),
     };
 
-    if (editada) {
-      this.fichasService.atualizar({ ...dados, id: editada.id });
-    } else {
-      this.fichasService.adicionar(dados);
+    this.salvando.set(true);
+    try {
+      if (editada) {
+        await this.fichasService.atualizar({ ...dados, id: editada.id });
+      } else {
+        await this.fichasService.adicionar(dados);
+      }
+    } catch (erro) {
+      this.aviso.erro(erro);
+      return;
+    } finally {
+      this.salvando.set(false);
     }
 
-    this.router.navigate(['/app/fichas']);
+    this.aviso.sucesso(editada ? 'Ficha atualizada.' : 'Ficha lançada.');
+    void this.router.navigate(['/app/fichas']);
   }
 
   private rolarParaPrimeiroErro(): void {

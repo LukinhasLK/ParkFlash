@@ -1,12 +1,15 @@
+import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { Ficha } from '../models';
 import { despesasDaFicha, round2 } from './calc';
 import { DespesasService } from './despesas.service';
 import { anoDe, diaDaSemana, DIAS_SEMANA, diaDe, Filtro, formatarData, hojeIso, mesDe, noPeriodo, Periodo } from './periodo';
-import { FICHAS_SEED } from './seed';
-import { carregar, salvar } from './storage';
+import { API_URL } from './api';
 
-const CHAVE = 'parkflash.fichas';
+const URL = `${API_URL}/fichas`;
+
+const maisRecentePrimeiro = (a: Ficha, b: Ficha) => b.data.localeCompare(a.data) || b.id - a.id;
 
 export interface ResumoFichas {
   fichas: number;
@@ -32,9 +35,18 @@ export interface ResumoMes {
 @Injectable({ providedIn: 'root' })
 export class FichasService {
   private readonly despesasService = inject(DespesasService);
-  private readonly _fichas = signal<Ficha[]>(carregar(CHAVE, FICHAS_SEED));
+  private readonly http = inject(HttpClient);
+  private readonly _fichas = signal<Ficha[]>([]);
 
   readonly fichas = this._fichas.asReadonly();
+
+  async carregar(): Promise<void> {
+    this._fichas.set(await firstValueFrom(this.http.get<Ficha[]>(URL)));
+  }
+
+  limpar(): void {
+    this._fichas.set([]);
+  }
 
   /** Mês aberto por padrão nas telas: o da ficha mais recente (até hoje) ou o mês atual. */
   readonly periodoReferencia = computed<Periodo>(() => {
@@ -75,7 +87,7 @@ export class FichasService {
           ficha.data.includes(busca)
         );
       })
-      .sort((a, b) => b.data.localeCompare(a.data) || b.id - a.id);
+      .sort(maisRecentePrimeiro);
   }
 
   resumir(fichas: Ficha[]): ResumoFichas {
@@ -145,23 +157,22 @@ export class FichasService {
     return this._fichas().some((f) => f.manobristas.some((m) => m.manobristaId === manobristaId));
   }
 
-  adicionar(ficha: Omit<Ficha, 'id'>): Ficha {
-    const nova: Ficha = { ...ficha, id: this._fichas().reduce((maior, f) => Math.max(maior, f.id), 0) + 1 };
-    this._fichas.update((lista) => [nova, ...lista].sort((a, b) => b.data.localeCompare(a.data) || b.id - a.id));
-    this.persistir();
+  /** O servidor recalcula carros, bruto e líquido e devolve a ficha salva. */
+  async adicionar(ficha: Omit<Ficha, 'id'>): Promise<Ficha> {
+    const nova = await firstValueFrom(this.http.post<Ficha>(URL, ficha));
+    this._fichas.update((lista) => [nova, ...lista].sort(maisRecentePrimeiro));
     return nova;
   }
 
-  atualizar(ficha: Ficha): void {
-    this._fichas.update((lista) =>
-      lista.map((f) => (f.id === ficha.id ? ficha : f)).sort((a, b) => b.data.localeCompare(a.data) || b.id - a.id)
-    );
-    this.persistir();
+  async atualizar(ficha: Ficha): Promise<Ficha> {
+    const salva = await firstValueFrom(this.http.put<Ficha>(`${URL}/${ficha.id}`, ficha));
+    this._fichas.update((lista) => lista.map((f) => (f.id === salva.id ? salva : f)).sort(maisRecentePrimeiro));
+    return salva;
   }
 
-  excluir(id: number): void {
+  async excluir(id: number): Promise<void> {
+    await firstValueFrom(this.http.delete<void>(`${URL}/${id}`));
     this._fichas.update((lista) => lista.filter((f) => f.id !== id));
-    this.persistir();
   }
 
   /** Quantos dias cada manobrista trabalhou no mês/ano e quanto recebeu. */
@@ -178,9 +189,5 @@ export class FichasService {
     }
 
     return mapa;
-  }
-
-  private persistir(): void {
-    salvar(CHAVE, this._fichas());
   }
 }

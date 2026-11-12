@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import { mensagemDeErro } from '../../core/services/api';
 import { AuthService } from '../../core/services/auth.service';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { corDoAvatar } from '../../shared/nav-items';
@@ -37,7 +38,9 @@ export class PerfilComponent {
     return corDoAvatar(nome);
   }
 
-  protected trocarSenha(): void {
+  protected readonly salvando = signal(false);
+
+  protected async trocarSenha(): Promise<void> {
     this.mensagem.set(null);
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -45,9 +48,14 @@ export class PerfilComponent {
     }
 
     const { senhaAtual, novaSenha } = this.form.getRawValue();
-    if (!this.auth.trocarSenha(senhaAtual, novaSenha)) {
-      this.mensagem.set({ tipo: 'erro', texto: 'A senha atual está incorreta.' });
+    this.salvando.set(true);
+    try {
+      await this.auth.trocarSenha(senhaAtual, novaSenha);
+    } catch (erro) {
+      this.mensagem.set({ tipo: 'erro', texto: mensagemDeErro(erro) });
       return;
+    } finally {
+      this.salvando.set(false);
     }
 
     this.form.reset();

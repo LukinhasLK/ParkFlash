@@ -1,10 +1,10 @@
-/** Persistência best-effort em localStorage — o app funciona sem ela. */
+/** Persistência best-effort em localStorage — hoje só guarda o token da sessão. */
 
-/** Sobe a versão quando o formato dos dados muda; dados antigos são ignorados. */
-const VERSAO = 'v2';
+/** v3: os dados passaram a ficar no back end; chaves de versões anteriores são removidas. */
+const VERSAO = 'v3';
 const chaveVersionada = (chave: string) => chave.replace(/^parkflash\./, `parkflash.${VERSAO}.`);
 
-/** Remove chaves de versões anteriores (ex.: `parkflash.fichas`, que guardava a unidade pelo nome). */
+/** Remove chaves de versões anteriores (fichas, usuários e senhas do antigo modo demonstração). */
 export function limparVersoesAntigas(): void {
   try {
     Object.keys(localStorage)

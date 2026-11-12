@@ -14,6 +14,7 @@ import { IconComponent } from '../../shared/components/icon/icon.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { CurrencyBrPipe } from '../../shared/pipes/currency-br.pipe';
+import { AvisoService } from '../../core/services/aviso.service';
 
 interface LinhaManobrista extends Manobrista {
   diasNoMes: number;
@@ -32,6 +33,7 @@ interface LinhaManobrista extends Manobrista {
 })
 export class ManobristasComponent {
   private readonly manobristasService = inject(ManobristasService);
+  private readonly aviso = inject(AvisoService);
   private readonly fichasService = inject(FichasService);
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
@@ -81,7 +83,7 @@ export class ManobristasComponent {
     this.formAberto.set(true);
   }
 
-  protected salvar(): void {
+  protected async salvar(): Promise<void> {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -89,12 +91,16 @@ export class ManobristasComponent {
 
     const atual = this.editando();
 
-    this.manobristasService.salvarManobrista({
-      ...this.form.getRawValue(),
-      id: atual?.id,
-    });
-
-    this.formAberto.set(false);
+    try {
+      await this.manobristasService.salvarManobrista({
+        ...this.form.getRawValue(),
+        id: atual?.id,
+      });
+      this.formAberto.set(false);
+      this.aviso.sucesso('Manobrista salvo.');
+    } catch (erro) {
+      this.aviso.erro(erro);
+    }
   }
 
   /** Quem já aparece em fichas não pode sair do cadastro (o histórico perderia o nome). */
@@ -106,10 +112,16 @@ export class ManobristasComponent {
     }
   }
 
-  protected confirmarExclusao(): void {
+  protected async confirmarExclusao(): Promise<void> {
     const manobrista = this.paraExcluir();
-    if (manobrista) this.manobristasService.excluir(manobrista.id);
     this.paraExcluir.set(null);
+    if (!manobrista) return;
+    try {
+      await this.manobristasService.excluir(manobrista.id);
+      this.aviso.sucesso('Manobrista excluído.');
+    } catch (erro) {
+      this.aviso.erro(erro);
+    }
   }
 
   protected invalido(nome: string): boolean {
